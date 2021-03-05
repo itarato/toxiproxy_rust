@@ -1,3 +1,21 @@
+/**
+
+x   GET /proxies - List existing proxies and their toxics
+    POST /proxies - Create a new proxy
+x   POST /populate - Create or replace a list of proxies
+    GET /proxies/{proxy} - Show the proxy with all its active toxics
+    POST /proxies/{proxy} - Update a proxy's fields
+    DELETE /proxies/{proxy} - Delete an existing proxy
+    GET /proxies/{proxy}/toxics - List active toxics
+    POST /proxies/{proxy}/toxics - Create a new toxic
+    GET /proxies/{proxy}/toxics/{toxic} - Get an active toxic's fields
+    POST /proxies/{proxy}/toxics/{toxic} - Update an active toxic
+    DELETE /proxies/{proxy}/toxics/{toxic} - Remove an active toxic
+x   POST /reset - Enable all proxies and remove all active toxics
+x   GET /version - Returns the server version number
+
+**/
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -5,7 +23,7 @@ use http;
 use reqwest::{self, blocking::Client};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
 const TOXIPROXY_DEFAULT_URI: &str = "http://127.0.0.1:8474";
 lazy_static! {
@@ -18,6 +36,7 @@ struct Toxic {
     r#type: String,
     stream: String,
     toxicity: f32,
+    attributes: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -75,14 +94,35 @@ impl Toxiproxy {
     }
 
     pub fn is_running(&self) -> bool {
-        let uri = self
+        let addr = self
             .toxiproxy_base_uri
             .parse::<http::Uri>()
-            .expect("Toxiproxy URI provided is not valid");
+            .expect("Toxiproxy URI provided is not valid")
+            .authority()
+            .expect("Invalid authority component")
+            .to_string();
 
-        std::net::TcpStream::connect(uri.authority().expect("Invalid URI").to_string())
+        std::net::TcpStream::connect(addr)
             .map(|_| true)
             .unwrap_or(false)
+    }
+
+    pub fn version(&self) -> Result<String, String> {
+        self.get("/version")
+            .map(|ref mut response| {
+                let mut body = String::new();
+                response
+                    .read_to_string(&mut body)
+                    .expect("HTTP response cannot be read");
+                body
+            })
+            .map_err(|err| format!("<version> has failed: {}", err))
+    }
+
+    pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
+        self.all()
+            .map(|ref mut proxy_map| proxy_map.remove(name))
+            .unwrap_or(None)
     }
 
     fn get(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
@@ -127,4 +167,6 @@ fn main() {
         "127.0.0.1:2001".into(),
     )]));
     dbg!(TOXIPROXY.all());
+    dbg!(TOXIPROXY.find_proxy("socket"));
+    dbg!(TOXIPROXY.version());
 }
