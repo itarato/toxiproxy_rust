@@ -1,15 +1,15 @@
 /**
 
 x   GET /proxies - List existing proxies and their toxics
-    POST /proxies - Create a new proxy
+no  POST /proxies - Create a new proxy
 x   POST /populate - Create or replace a list of proxies
-    GET /proxies/{proxy} - Show the proxy with all its active toxics
+no   GET /proxies/{proxy} - Show the proxy with all its active toxics
 -   POST /proxies/{proxy} - Update a proxy's fields
 x   DELETE /proxies/{proxy} - Delete an existing proxy
 x   GET /proxies/{proxy}/toxics - List active toxics
-    POST /proxies/{proxy}/toxics - Create a new toxic
+-   POST /proxies/{proxy}/toxics - Create a new toxic
     GET /proxies/{proxy}/toxics/{toxic} - Get an active toxic's fields
-    POST /proxies/{proxy}/toxics/{toxic} - Update an active toxic
+-   POST /proxies/{proxy}/toxics/{toxic} - Update an active toxic
     DELETE /proxies/{proxy}/toxics/{toxic} - Remove an active toxic
 x   POST /reset - Enable all proxies and remove all active toxics
 x   GET /version - Returns the server version number
@@ -220,7 +220,7 @@ impl Proxy {
             .map(|_| ())
     }
 
-    pub fn toxics(&self) -> Result<Vec<Toxic>, String> {
+    fn toxics(&self) -> Result<Vec<Toxic>, String> {
         let path = format!("/proxies/{}/toxics", self.name);
 
         self.client
@@ -233,17 +233,13 @@ impl Proxy {
             .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
     }
 
-    pub fn with_latency<F>(
+    pub fn with_latency(
         &self,
         stream: String,
         latency: ToxicValueType,
         jitter: ToxicValueType,
         toxicity: f32,
-        closure: F,
-    ) -> &Self
-    where
-        F: FnOnce(),
-    {
+    ) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("latency".into(), latency);
         attributes.insert("jitter".into(), jitter);
@@ -264,9 +260,46 @@ impl Proxy {
                 panic!("<proxies>.<toxics> creation has failed: {}", err);
             });
 
-        closure();
-
         self
+    }
+
+    pub fn down<F>(&self) -> &Self {
+        self.disable().expect("cannot be disabled");
+        self
+    }
+
+    pub fn apply<F>(&self, closure: F) -> Result<(), String>
+    where
+        F: FnOnce(),
+    {
+        closure();
+        self.delete_all_toxics()
+    }
+
+    fn delete_all_toxics(&self) -> Result<(), String> {
+        self.toxics()
+            .and_then(|toxic_list| {
+                for toxic in toxic_list {
+                    let path = format!("/proxies/{}/toxics.{}", self.name, toxic.name);
+                    let result = self
+                        .client
+                        .as_ref()
+                        .expect(ERR_MISSING_HTTP_CLIENT)
+                        .lock()
+                        .expect(ERR_LOCK)
+                        .delete(&path);
+
+                    if result.is_err() {
+                        return Err(format!(
+                            "<proxies>.<toxics> delete failed: {}",
+                            result.err().unwrap()
+                        ));
+                    }
+                }
+
+                Ok(())
+            })
+            .map_err(|err| format!("cannot delete toxics: {}", err))
     }
 }
 
@@ -336,6 +369,10 @@ impl Toxiproxy {
                     .remove(name)
                     .map(|proxy| proxy.with_client(self.client.clone()))
             })
+            .and_then(|maybe_proxy| {
+                maybe_proxy.as_ref().map(|proxy| proxy.delete_all_toxics());
+                Ok(maybe_proxy)
+            })
             .unwrap_or(None)
     }
 }
@@ -362,25 +399,27 @@ mod tests {
         // dbg!(proxy.disable());
         // dbg!(proxy.enable());
 
-        proxy.with_latency("downstream".into(), 2000, 0, 1.0, || {
-            use std::io::prelude::*;
-            use std::net::TcpStream;
-            use std::time::SystemTime;
+        proxy
+            .with_latency("downstream".into(), 2000, 0, 1.0)
+            .apply(|| {
+                use std::io::prelude::*;
+                use std::net::TcpStream;
+                use std::time::SystemTime;
 
-            println!("START {:?}", SystemTime::now());
+                println!("START {:?}", SystemTime::now());
 
-            dbg!(TOXIPROXY.all());
+                dbg!(TOXIPROXY.all());
 
-            let mut stream =
-                TcpStream::connect("localhost:2001").expect("stream cannot be created");
+                let mut stream =
+                    TcpStream::connect("localhost:2001").expect("stream cannot be created");
 
-            let mut out = String::new();
+                let mut out = String::new();
 
-            stream.read_to_string(&mut out).expect("read body failed");
+                stream.read_to_string(&mut out).expect("read body failed");
 
-            // dbg!(out);
-            println!("END {:?}", SystemTime::now());
-        });
+                // dbg!(out);
+                println!("END {:?}", SystemTime::now());
+            });
         dbg!(TOXIPROXY.all());
     }
 }
