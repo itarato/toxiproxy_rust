@@ -781,7 +781,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "360dfd1d6d30e05fda32ace2c8c70e9c0a9da713275777f5a4dbb8a1893930c6"
 
 [[package]]
-name = "toxiplay"
+name = "toxiproxy_rust"
 version = "0.1.0"
 dependencies = [
  "http",
