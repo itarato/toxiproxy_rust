@@ -109,11 +109,19 @@ pub struct Toxic {
 
     #[serde(skip)]
     client: Option<Arc<Mutex<HttpClient>>>,
+
+    #[serde(skip)]
+    proxy_name: Option<String>,
 }
 
 impl Toxic {
     fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
         self.client = Some(client);
+        self
+    }
+
+    fn with_proxy(mut self, proxy_name: String) -> Self {
+        self.proxy_name = Some(proxy_name);
         self
     }
 }
@@ -200,6 +208,10 @@ impl Proxy {
             .get(&path)
             .and_then(|response| response.json())
             .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
+    }
+
+    pub fn with_toxic(&self) -> &Self {
+        self
     }
 }
 
