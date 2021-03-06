@@ -30,99 +30,17 @@ lazy_static! {
     static ref TOXIPROXY: Toxiproxy = Toxiproxy::new(TOXIPROXY_DEFAULT_URI.into());
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Toxic {
-    name: String,
-    r#type: String,
-    stream: String,
-    toxicity: f32,
-    attributes: HashMap<String, String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Proxy {
-    name: String,
-    listen: String,
-    upstream: String,
-    enabled: bool,
-    toxics: Vec<Toxic>,
-}
-
-impl Proxy {
-    fn new(name: String, listen: String, upstream: String) -> Self {
-        Self {
-            name,
-            listen,
-            upstream,
-            enabled: true,
-            toxics: vec![],
-        }
-    }
-}
-
-struct Toxiproxy {
+struct HttpClient {
     client: Client,
     toxiproxy_base_uri: String,
 }
 
-impl Toxiproxy {
+impl HttpClient {
     fn new(toxiproxy_base_uri: String) -> Self {
         Self {
             client: reqwest::blocking::Client::new(),
             toxiproxy_base_uri,
         }
-    }
-
-    pub fn populate(&self, proxies: Vec<Proxy>) -> Result<Vec<Proxy>, String> {
-        let proxies_json = serde_json::to_string(&proxies).unwrap();
-        self.post_with_data("/populate", proxies_json)
-            .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
-            .map_err(|err| format!("<populate> has failed: {}", err))
-            .map(|ref mut response_obj| response_obj.remove("proxies").unwrap_or(vec![]))
-    }
-
-    pub fn reset(&self) -> Result<(), String> {
-        self.post("/reset")
-            .map(|_| ())
-            .map_err(|err| format!("<reset> has failed: {}", err))
-    }
-
-    pub fn all(&self) -> Result<HashMap<String, Proxy>, String> {
-        self.get("/proxies")
-            .and_then(|response| response.json())
-            .map_err(|err| format!("<proxies> has failed: {}", err))
-    }
-
-    pub fn is_running(&self) -> bool {
-        let addr = self
-            .toxiproxy_base_uri
-            .parse::<http::Uri>()
-            .expect("Toxiproxy URI provided is not valid")
-            .authority()
-            .expect("Invalid authority component")
-            .to_string();
-
-        std::net::TcpStream::connect(addr)
-            .map(|_| true)
-            .unwrap_or(false)
-    }
-
-    pub fn version(&self) -> Result<String, String> {
-        self.get("/version")
-            .map(|ref mut response| {
-                let mut body = String::new();
-                response
-                    .read_to_string(&mut body)
-                    .expect("HTTP response cannot be read");
-                body
-            })
-            .map_err(|err| format!("<version> has failed: {}", err))
-    }
-
-    pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
-        self.all()
-            .map(|ref mut proxy_map| proxy_map.remove(name))
-            .unwrap_or(None)
     }
 
     fn get(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
@@ -155,6 +73,108 @@ impl Toxiproxy {
         let mut full_uri = self.toxiproxy_base_uri.clone();
         full_uri.push_str(path);
         full_uri
+    }
+
+    fn is_alive(&self) -> bool {
+        let addr = self
+            .toxiproxy_base_uri
+            .parse::<http::Uri>()
+            .expect("Toxiproxy URI provided is not valid")
+            .authority()
+            .expect("Invalid authority component")
+            .to_string();
+
+        std::net::TcpStream::connect(addr)
+            .map(|_| true)
+            .unwrap_or(false)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Toxic {
+    name: String,
+    r#type: String,
+    stream: String,
+    toxicity: f32,
+    attributes: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Proxy {
+    name: String,
+    listen: String,
+    upstream: String,
+    enabled: bool,
+    toxics: Vec<Toxic>,
+}
+
+impl Proxy {
+    fn new(name: String, listen: String, upstream: String) -> Self {
+        Self {
+            name,
+            listen,
+            upstream,
+            enabled: true,
+            toxics: vec![],
+        }
+    }
+}
+
+struct Toxiproxy {
+    client: HttpClient,
+}
+
+impl Toxiproxy {
+    fn new(toxiproxy_base_uri: String) -> Self {
+        Self {
+            client: HttpClient::new(toxiproxy_base_uri),
+        }
+    }
+
+    pub fn populate(&self, proxies: Vec<Proxy>) -> Result<Vec<Proxy>, String> {
+        let proxies_json = serde_json::to_string(&proxies).unwrap();
+        self.client
+            .post_with_data("/populate", proxies_json)
+            .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
+            .map_err(|err| format!("<populate> has failed: {}", err))
+            .map(|ref mut response_obj| response_obj.remove("proxies").unwrap_or(vec![]))
+    }
+
+    pub fn reset(&self) -> Result<(), String> {
+        self.client
+            .post("/reset")
+            .map(|_| ())
+            .map_err(|err| format!("<reset> has failed: {}", err))
+    }
+
+    pub fn all(&self) -> Result<HashMap<String, Proxy>, String> {
+        self.client
+            .get("/proxies")
+            .and_then(|response| response.json())
+            .map_err(|err| format!("<proxies> has failed: {}", err))
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.client.is_alive()
+    }
+
+    pub fn version(&self) -> Result<String, String> {
+        self.client
+            .get("/version")
+            .map(|ref mut response| {
+                let mut body = String::new();
+                response
+                    .read_to_string(&mut body)
+                    .expect("HTTP response cannot be read");
+                body
+            })
+            .map_err(|err| format!("<version> has failed: {}", err))
+    }
+
+    pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
+        self.all()
+            .map(|ref mut proxy_map| proxy_map.remove(name))
+            .unwrap_or(None)
     }
 }
 
