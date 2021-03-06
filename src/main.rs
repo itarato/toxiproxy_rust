@@ -23,6 +23,7 @@ use http;
 use reqwest::{self, blocking::Client};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Read};
 
 const TOXIPROXY_DEFAULT_URI: &str = "http://127.0.0.1:8474";
@@ -121,19 +122,21 @@ impl Proxy {
 }
 
 struct Toxiproxy {
-    client: HttpClient,
+    client: Arc<Mutex<HttpClient>>,
 }
 
 impl Toxiproxy {
     fn new(toxiproxy_base_uri: String) -> Self {
         Self {
-            client: HttpClient::new(toxiproxy_base_uri),
+            client: Arc::new(Mutex::new(HttpClient::new(toxiproxy_base_uri))),
         }
     }
 
     pub fn populate(&self, proxies: Vec<Proxy>) -> Result<Vec<Proxy>, String> {
         let proxies_json = serde_json::to_string(&proxies).unwrap();
         self.client
+            .lock()
+            .expect("Client lock failed")
             .post_with_data("/populate", proxies_json)
             .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
             .map_err(|err| format!("<populate> has failed: {}", err))
@@ -142,6 +145,8 @@ impl Toxiproxy {
 
     pub fn reset(&self) -> Result<(), String> {
         self.client
+            .lock()
+            .expect("Client lock failed")
             .post("/reset")
             .map(|_| ())
             .map_err(|err| format!("<reset> has failed: {}", err))
@@ -149,17 +154,21 @@ impl Toxiproxy {
 
     pub fn all(&self) -> Result<HashMap<String, Proxy>, String> {
         self.client
+            .lock()
+            .expect("Client lock failed")
             .get("/proxies")
             .and_then(|response| response.json())
             .map_err(|err| format!("<proxies> has failed: {}", err))
     }
 
     pub fn is_running(&self) -> bool {
-        self.client.is_alive()
+        self.client.lock().expect("Client lock failed").is_alive()
     }
 
     pub fn version(&self) -> Result<String, String> {
         self.client
+            .lock()
+            .expect("Client lock failed")
             .get("/version")
             .map(|ref mut response| {
                 let mut body = String::new();
