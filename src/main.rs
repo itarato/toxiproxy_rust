@@ -178,7 +178,7 @@ impl Proxy {
         self
     }
 
-    pub fn disable(&self) -> Result<(), String> {
+    fn disable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), false);
         let body = serde_json::to_string(&payload).expect("Failed serializing");
@@ -186,7 +186,7 @@ impl Proxy {
         self.update(body)
     }
 
-    pub fn enable(&self) -> Result<(), String> {
+    fn enable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), true);
         let body = serde_json::to_string(&payload).expect("Failed serializing");
@@ -263,9 +263,13 @@ impl Proxy {
         self
     }
 
-    pub fn down<F>(&self) -> &Self {
+    pub fn down<F>(&self, closure: F)
+    where
+        F: FnOnce(),
+    {
         self.disable().expect("cannot be disabled");
-        self
+        closure();
+        self.enable().expect("cannot be enabled");
     }
 
     pub fn apply<F>(&self, closure: F) -> Result<(), String>
@@ -365,13 +369,13 @@ impl Toxiproxy {
     pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
         self.all()
             .map(|ref mut proxy_map| {
-                proxy_map
-                    .remove(name)
-                    .map(|proxy| proxy.with_client(self.client.clone()))
-            })
-            .and_then(|maybe_proxy| {
-                maybe_proxy.as_ref().map(|proxy| proxy.delete_all_toxics());
-                Ok(maybe_proxy)
+                proxy_map.remove(name).map(|proxy| {
+                    let proxy = proxy.with_client(self.client.clone());
+                    proxy
+                        .delete_all_toxics()
+                        .expect("proxy cannot reset toxics");
+                    proxy
+                })
             })
             .unwrap_or(None)
     }
