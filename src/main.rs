@@ -340,23 +340,47 @@ impl Toxiproxy {
     }
 }
 
-fn main() {
-    // dbg!(TOXIPROXY.is_running());
-    dbg!(TOXIPROXY.reset());
-    dbg!(TOXIPROXY.populate(vec![Proxy::new(
-        "socket".into(),
-        "127.0.0.1:2001".into(),
-        "127.0.0.1:2000".into(),
-    )]));
-    // dbg!(TOXIPROXY.all());
-    // dbg!(TOXIPROXY.version());
+fn main() {}
 
-    let proxy = dbg!(TOXIPROXY.find_proxy("socket").unwrap());
-    // dbg!(proxy.disable());
-    // dbg!(proxy.enable());
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    proxy.with_latency("upstream".into(), 1000, 0, 1.0, || {
-        println!("Hekki");
-    });
-    dbg!(TOXIPROXY.all());
+    #[test]
+    fn basics() {
+        // dbg!(TOXIPROXY.is_running());
+        dbg!(TOXIPROXY.reset());
+        dbg!(TOXIPROXY.populate(vec![Proxy::new(
+            "socket".into(),
+            "localhost:2001".into(),
+            "localhost:2000".into(),
+        )]));
+        // dbg!(TOXIPROXY.all());
+        // dbg!(TOXIPROXY.version());
+
+        let proxy = dbg!(TOXIPROXY.find_proxy("socket").unwrap());
+        // dbg!(proxy.disable());
+        // dbg!(proxy.enable());
+
+        proxy.with_latency("downstream".into(), 2000, 0, 1.0, || {
+            use std::io::prelude::*;
+            use std::net::TcpStream;
+            use std::time::SystemTime;
+
+            println!("START {:?}", SystemTime::now());
+
+            dbg!(TOXIPROXY.all());
+
+            let mut stream =
+                TcpStream::connect("localhost:2001").expect("stream cannot be created");
+
+            let mut out = String::new();
+
+            stream.read_to_string(&mut out).expect("read body failed");
+
+            // dbg!(out);
+            println!("END {:?}", SystemTime::now());
+        });
+        dbg!(TOXIPROXY.all());
+    }
 }
