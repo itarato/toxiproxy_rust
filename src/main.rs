@@ -1,21 +1,3 @@
-/**
-
-x   GET /proxies - List existing proxies and their toxics
-no  POST /proxies - Create a new proxy
-x   POST /populate - Create or replace a list of proxies
-no   GET /proxies/{proxy} - Show the proxy with all its active toxics
--   POST /proxies/{proxy} - Update a proxy's fields
-x   DELETE /proxies/{proxy} - Delete an existing proxy
-x   GET /proxies/{proxy}/toxics - List active toxics
--   POST /proxies/{proxy}/toxics - Create a new toxic
-    GET /proxies/{proxy}/toxics/{toxic} - Get an active toxic's fields
--   POST /proxies/{proxy}/toxics/{toxic} - Update an active toxic
-    DELETE /proxies/{proxy}/toxics/{toxic} - Remove an active toxic
-x   POST /reset - Enable all proxies and remove all active toxics
-x   GET /version - Returns the server version number
-
-**/
-
 #[macro_use]
 extern crate lazy_static;
 
@@ -112,12 +94,6 @@ pub struct Toxic {
     stream: String,
     toxicity: f32,
     attributes: HashMap<String, ToxicValueType>,
-
-    #[serde(skip)]
-    client: Option<Arc<Mutex<HttpClient>>>,
-
-    #[serde(skip)]
-    proxy_name: Option<String>,
 }
 
 impl Toxic {
@@ -134,18 +110,7 @@ impl Toxic {
             stream,
             toxicity,
             attributes,
-            client: None,
-            proxy_name: None,
         }
-    }
-    fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
-        self.client = Some(client);
-        self
-    }
-
-    fn with_proxy(mut self, proxy_name: String) -> Self {
-        self.proxy_name = Some(proxy_name);
-        self
     }
 }
 
@@ -162,7 +127,7 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    fn new(name: String, listen: String, upstream: String) -> Self {
+    pub fn new(name: String, listen: String, upstream: String) -> Self {
         Self {
             name,
             listen,
@@ -244,9 +209,65 @@ impl Proxy {
         attributes.insert("latency".into(), latency);
         attributes.insert("jitter".into(), jitter);
 
-        let toxic = Toxic::new("latency".into(), stream, toxicity, attributes);
-        let body = serde_json::to_string(&toxic).expect(ERR_JSON_SERIALIZE);
+        self.create_toxic(Toxic::new("latency".into(), stream, toxicity, attributes))
+    }
 
+    pub fn with_bandwidth(&self, stream: String, rate: ToxicValueType, toxicity: f32) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("rate".into(), rate);
+
+        self.create_toxic(Toxic::new("bandwidth".into(), stream, toxicity, attributes))
+    }
+
+    pub fn with_slow_close(&self, stream: String, delay: ToxicValueType, toxicity: f32) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("delay".into(), delay);
+
+        self.create_toxic(Toxic::new(
+            "slow_close".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
+    }
+
+    pub fn with_timeout(&self, stream: String, timeout: ToxicValueType, toxicity: f32) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("timeout".into(), timeout);
+
+        self.create_toxic(Toxic::new("timeout".into(), stream, toxicity, attributes))
+    }
+
+    pub fn with_slicer(
+        &self,
+        stream: String,
+        average_size: ToxicValueType,
+        size_variation: ToxicValueType,
+        delay: ToxicValueType,
+        toxicity: f32,
+    ) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("average_size".into(), average_size);
+        attributes.insert("size_variation".into(), size_variation);
+        attributes.insert("delay".into(), delay);
+
+        self.create_toxic(Toxic::new("slicer".into(), stream, toxicity, attributes))
+    }
+
+    pub fn with_limit_data(&self, stream: String, bytes: ToxicValueType, toxicity: f32) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("bytes".into(), bytes);
+
+        self.create_toxic(Toxic::new(
+            "limit_data".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
+    }
+
+    fn create_toxic(&self, toxic: Toxic) -> &Self {
+        let body = serde_json::to_string(&toxic).expect(ERR_JSON_SERIALIZE);
         let path = format!("/proxies/{}/toxics", self.name);
 
         let _ = self
