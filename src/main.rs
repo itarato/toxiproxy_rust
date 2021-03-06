@@ -26,9 +26,15 @@ use serde_json;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Read};
 
+type ToxicValueType = u32;
+
 const TOXIPROXY_DEFAULT_URI: &str = "http://127.0.0.1:8474";
+const ERR_MISSING_HTTP_CLIENT: &str = "HTTP client not available";
+const ERR_LOCK: &str = "Lock cannot be granted";
+const ERR_JSON_SERIALIZE: &str = "JSON serialization failed";
+
 lazy_static! {
-    static ref TOXIPROXY: Toxiproxy = Toxiproxy::new(TOXIPROXY_DEFAULT_URI.into());
+    pub static ref TOXIPROXY: Toxiproxy = Toxiproxy::new(TOXIPROXY_DEFAULT_URI.into());
 }
 
 #[derive(Debug)]
@@ -105,7 +111,7 @@ pub struct Toxic {
     r#type: String,
     stream: String,
     toxicity: f32,
-    attributes: HashMap<String, u32>,
+    attributes: HashMap<String, ToxicValueType>,
 
     #[serde(skip)]
     client: Option<Arc<Mutex<HttpClient>>>,
@@ -115,6 +121,23 @@ pub struct Toxic {
 }
 
 impl Toxic {
+    fn new(
+        r#type: String,
+        stream: String,
+        toxicity: f32,
+        attributes: HashMap<String, ToxicValueType>,
+    ) -> Self {
+        let name = format!("{}_{}", r#type, stream);
+        Self {
+            name,
+            r#type,
+            stream,
+            toxicity,
+            attributes,
+            client: None,
+            proxy_name: None,
+        }
+    }
     fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
         self.client = Some(client);
         self
@@ -176,9 +199,9 @@ impl Proxy {
 
         self.client
             .as_ref()
-            .expect("HTTP client not populated")
+            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .post_with_data(&path, payload)
             .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
@@ -189,9 +212,9 @@ impl Proxy {
 
         self.client
             .as_ref()
-            .expect("HTTP client not populated")
+            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .delete(&path)
             .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
@@ -202,12 +225,42 @@ impl Proxy {
 
         self.client
             .as_ref()
-            .expect("HTTP client not populated")
+            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .get(&path)
             .and_then(|response| response.json())
             .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
+    }
+
+    pub fn with_latency(
+        &self,
+        stream: String,
+        latency: ToxicValueType,
+        jitter: ToxicValueType,
+        toxicity: f32,
+    ) -> &Self {
+        let mut attributes = HashMap::new();
+        attributes.insert("latency".into(), latency);
+        attributes.insert("jitter".into(), jitter);
+
+        let toxic = Toxic::new("latency".into(), stream, toxicity, attributes);
+        let body = serde_json::to_string(&toxic).expect(ERR_JSON_SERIALIZE);
+
+        let path = format!("/proxies/{}/toxics", self.name);
+
+        let _ = self
+            .client
+            .as_ref()
+            .expect(ERR_MISSING_HTTP_CLIENT)
+            .lock()
+            .expect(ERR_LOCK)
+            .post_with_data(&path, body)
+            .map_err(|err| {
+                panic!("<proxies>.<toxics> creation has failed: {}", err);
+            });
+
+        self
     }
 
     pub fn with_toxic(&self) -> &Self {
@@ -215,7 +268,7 @@ impl Proxy {
     }
 }
 
-struct Toxiproxy {
+pub struct Toxiproxy {
     client: Arc<Mutex<HttpClient>>,
 }
 
@@ -286,17 +339,20 @@ impl Toxiproxy {
 }
 
 fn main() {
-    dbg!(TOXIPROXY.is_running());
+    // dbg!(TOXIPROXY.is_running());
     dbg!(TOXIPROXY.reset());
     dbg!(TOXIPROXY.populate(vec![Proxy::new(
         "socket".into(),
         "127.0.0.1:2000".into(),
         "127.0.0.1:2001".into(),
     )]));
-    dbg!(TOXIPROXY.all());
-    dbg!(TOXIPROXY.version());
+    // dbg!(TOXIPROXY.all());
+    // dbg!(TOXIPROXY.version());
 
     let proxy = dbg!(TOXIPROXY.find_proxy("socket").unwrap());
-    dbg!(proxy.disable());
-    dbg!(proxy.enable());
+    // dbg!(proxy.disable());
+    // dbg!(proxy.enable());
+
+    proxy.with_latency("upstream".into(), 1000, 0, 1.0);
+    dbg!(TOXIPROXY.all());
 }
