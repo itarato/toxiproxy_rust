@@ -233,13 +233,17 @@ impl Proxy {
             .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
     }
 
-    pub fn with_latency(
+    pub fn with_latency<F>(
         &self,
         stream: String,
         latency: ToxicValueType,
         jitter: ToxicValueType,
         toxicity: f32,
-    ) -> &Self {
+        closure: F,
+    ) -> &Self
+    where
+        F: FnOnce(),
+    {
         let mut attributes = HashMap::new();
         attributes.insert("latency".into(), latency);
         attributes.insert("jitter".into(), jitter);
@@ -260,10 +264,8 @@ impl Proxy {
                 panic!("<proxies>.<toxics> creation has failed: {}", err);
             });
 
-        self
-    }
+        closure();
 
-    pub fn with_toxic(&self) -> &Self {
         self
     }
 }
@@ -343,8 +345,8 @@ fn main() {
     dbg!(TOXIPROXY.reset());
     dbg!(TOXIPROXY.populate(vec![Proxy::new(
         "socket".into(),
-        "127.0.0.1:2000".into(),
         "127.0.0.1:2001".into(),
+        "127.0.0.1:2000".into(),
     )]));
     // dbg!(TOXIPROXY.all());
     // dbg!(TOXIPROXY.version());
@@ -353,6 +355,8 @@ fn main() {
     // dbg!(proxy.disable());
     // dbg!(proxy.enable());
 
-    proxy.with_latency("upstream".into(), 1000, 0, 1.0);
+    proxy.with_latency("upstream".into(), 1000, 0, 1.0, || {
+        println!("Hekki");
+    });
     dbg!(TOXIPROXY.all());
 }
