@@ -6,7 +6,7 @@ x   POST /populate - Create or replace a list of proxies
     GET /proxies/{proxy} - Show the proxy with all its active toxics
 -   POST /proxies/{proxy} - Update a proxy's fields
 x   DELETE /proxies/{proxy} - Delete an existing proxy
-    GET /proxies/{proxy}/toxics - List active toxics
+x   GET /proxies/{proxy}/toxics - List active toxics
     POST /proxies/{proxy}/toxics - Create a new toxic
     GET /proxies/{proxy}/toxics/{toxic} - Get an active toxic's fields
     POST /proxies/{proxy}/toxics/{toxic} - Update an active toxic
@@ -100,12 +100,22 @@ impl HttpClient {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Toxic {
+pub struct Toxic {
     name: String,
     r#type: String,
     stream: String,
     toxicity: f32,
-    attributes: HashMap<String, String>,
+    attributes: HashMap<String, u32>,
+
+    #[serde(skip)]
+    client: Option<Arc<Mutex<HttpClient>>>,
+}
+
+impl Toxic {
+    fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
+        self.client = Some(client);
+        self
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -177,6 +187,19 @@ impl Proxy {
             .delete(&path)
             .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
+    }
+
+    pub fn toxics(&self) -> Result<Vec<Toxic>, String> {
+        let path = format!("/proxies/{}/toxics", self.name);
+
+        self.client
+            .as_ref()
+            .expect("HTTP client not populated")
+            .lock()
+            .expect("Client lock failed")
+            .get(&path)
+            .and_then(|response| response.json())
+            .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
     }
 }
 
