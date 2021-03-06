@@ -4,8 +4,8 @@ x   GET /proxies - List existing proxies and their toxics
     POST /proxies - Create a new proxy
 x   POST /populate - Create or replace a list of proxies
     GET /proxies/{proxy} - Show the proxy with all its active toxics
-    POST /proxies/{proxy} - Update a proxy's fields
-    DELETE /proxies/{proxy} - Delete an existing proxy
+-   POST /proxies/{proxy} - Update a proxy's fields
+x   DELETE /proxies/{proxy} - Delete an existing proxy
     GET /proxies/{proxy}/toxics - List active toxics
     POST /proxies/{proxy}/toxics - Create a new toxic
     GET /proxies/{proxy}/toxics/{toxic} - Get an active toxic's fields
@@ -31,7 +31,8 @@ lazy_static! {
     static ref TOXIPROXY: Toxiproxy = Toxiproxy::new(TOXIPROXY_DEFAULT_URI.into());
 }
 
-struct HttpClient {
+#[derive(Debug)]
+pub struct HttpClient {
     client: Client,
     toxiproxy_base_uri: String,
 }
@@ -70,6 +71,13 @@ impl HttpClient {
             .send()
     }
 
+    fn delete(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
+        self.client
+            .delete(&self.uri_with_path(path))
+            .header("Content-Type", "application/json")
+            .send()
+    }
+
     fn uri_with_path(&self, path: &str) -> String {
         let mut full_uri = self.toxiproxy_base_uri.clone();
         full_uri.push_str(path);
@@ -101,12 +109,15 @@ struct Toxic {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Proxy {
+pub struct Proxy {
     name: String,
     listen: String,
     upstream: String,
     enabled: bool,
     toxics: Vec<Toxic>,
+
+    #[serde(skip)]
+    client: Option<Arc<Mutex<HttpClient>>>,
 }
 
 impl Proxy {
@@ -117,7 +128,55 @@ impl Proxy {
             upstream,
             enabled: true,
             toxics: vec![],
+            client: None,
         }
+    }
+
+    fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
+        self.client = Some(client);
+        self
+    }
+
+    pub fn disable(&self) -> Result<(), String> {
+        let mut payload: HashMap<String, bool> = HashMap::new();
+        payload.insert("enabled".into(), false);
+        let body = serde_json::to_string(&payload).expect("Failed serializing");
+
+        self.update(body)
+    }
+
+    pub fn enable(&self) -> Result<(), String> {
+        let mut payload: HashMap<String, bool> = HashMap::new();
+        payload.insert("enabled".into(), true);
+        let body = serde_json::to_string(&payload).expect("Failed serializing");
+
+        self.update(body)
+    }
+
+    pub fn update(&self, payload: String) -> Result<(), String> {
+        let path = format!("/proxies/{}", self.name);
+
+        self.client
+            .as_ref()
+            .expect("HTTP client not populated")
+            .lock()
+            .expect("Client lock failed")
+            .post_with_data(&path, payload)
+            .map_err(|err| format!("<disable> has failed: {}", err))
+            .map(|_| ())
+    }
+
+    pub fn delete(&self) -> Result<(), String> {
+        let path = format!("/proxies/{}", self.name);
+
+        self.client
+            .as_ref()
+            .expect("HTTP client not populated")
+            .lock()
+            .expect("Client lock failed")
+            .delete(&path)
+            .map_err(|err| format!("<disable> has failed: {}", err))
+            .map(|_| ())
     }
 }
 
@@ -182,7 +241,11 @@ impl Toxiproxy {
 
     pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
         self.all()
-            .map(|ref mut proxy_map| proxy_map.remove(name))
+            .map(|ref mut proxy_map| {
+                proxy_map
+                    .remove(name)
+                    .map(|proxy| proxy.with_client(self.client.clone()))
+            })
             .unwrap_or(None)
     }
 }
@@ -196,6 +259,9 @@ fn main() {
         "127.0.0.1:2001".into(),
     )]));
     dbg!(TOXIPROXY.all());
-    dbg!(TOXIPROXY.find_proxy("socket"));
     dbg!(TOXIPROXY.version());
+
+    let proxy = dbg!(TOXIPROXY.find_proxy("socket").unwrap());
+    dbg!(proxy.disable());
+    dbg!(proxy.enable());
 }
