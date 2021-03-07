@@ -116,10 +116,10 @@ impl Toxic {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Proxy {
-    name: String,
+    pub name: String,
     listen: String,
     upstream: String,
-    enabled: bool,
+    pub enabled: bool,
     toxics: Vec<Toxic>,
 
     #[serde(skip)]
@@ -185,7 +185,7 @@ impl Proxy {
             .map(|_| ())
     }
 
-    fn toxics(&self) -> Result<Vec<Toxic>, String> {
+    pub fn toxics(&self) -> Result<Vec<Toxic>, String> {
         let path = format!("/proxies/{}/toxics", self.name);
 
         self.client
@@ -284,13 +284,13 @@ impl Proxy {
         self
     }
 
-    pub fn down<F>(&self, closure: F)
+    pub fn down<F>(&self, closure: F) -> Result<(), String>
     where
         F: FnOnce(),
     {
-        self.disable().expect("cannot be disabled");
+        self.disable()?;
         closure();
-        self.enable().expect("cannot be enabled");
+        self.enable()
     }
 
     pub fn apply<F>(&self, closure: F) -> Result<(), String>
@@ -305,7 +305,7 @@ impl Proxy {
         self.toxics()
             .and_then(|toxic_list| {
                 for toxic in toxic_list {
-                    let path = format!("/proxies/{}/toxics.{}", self.name, toxic.name);
+                    let path = format!("/proxies/{}/toxics/{}", self.name, toxic.name);
                     let result = self
                         .client
                         .as_ref()
@@ -364,7 +364,16 @@ impl Toxiproxy {
             .lock()
             .expect("Client lock failed")
             .get("/proxies")
-            .and_then(|response| response.json())
+            .and_then(|response| {
+                response
+                    .json()
+                    .map(|mut proxy_map: HashMap<String, Proxy>| {
+                        for proxy in proxy_map.values_mut() {
+                            proxy.client = Some(self.client.clone());
+                        }
+                        proxy_map
+                    })
+            })
             .map_err(|err| format!("<proxies> has failed: {}", err))
     }
 
@@ -387,62 +396,24 @@ impl Toxiproxy {
             .map_err(|err| format!("<version> has failed: {}", err))
     }
 
-    pub fn find_proxy(&self, name: &str) -> Option<Proxy> {
-        self.all()
-            .map(|ref mut proxy_map| {
-                proxy_map.remove(name).map(|proxy| {
-                    let proxy = proxy.with_client(self.client.clone());
-                    proxy
-                        .delete_all_toxics()
-                        .expect("proxy cannot reset toxics");
-                    proxy
-                })
+    pub fn find_proxy(&self, name: &str) -> Result<Proxy, String> {
+        let path = format!("/proxies/{}", name);
+
+        let proxy_result = self
+            .client
+            .lock()
+            .expect("Client lock failed")
+            .get(&path)
+            .and_then(|response| response.json());
+
+        proxy_result
+            .map(|proxy: Proxy| {
+                let proxy = proxy.with_client(self.client.clone());
+                proxy
+                    .delete_all_toxics()
+                    .expect("proxy cannot reset toxics");
+                proxy
             })
-            .unwrap_or(None)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn basics() {
-        // dbg!(TOXIPROXY.is_running());
-        dbg!(TOXIPROXY.reset());
-        dbg!(TOXIPROXY.populate(vec![Proxy::new(
-            "socket".into(),
-            "localhost:2001".into(),
-            "localhost:2000".into(),
-        )]));
-        // dbg!(TOXIPROXY.all());
-        // dbg!(TOXIPROXY.version());
-
-        let proxy = dbg!(TOXIPROXY.find_proxy("socket").unwrap());
-        // dbg!(proxy.disable());
-        // dbg!(proxy.enable());
-
-        proxy
-            .with_latency("downstream".into(), 2000, 0, 1.0)
-            .apply(|| {
-                use std::io::prelude::*;
-                use std::net::TcpStream;
-                use std::time::SystemTime;
-
-                println!("START {:?}", SystemTime::now());
-
-                dbg!(TOXIPROXY.all());
-
-                let mut stream =
-                    TcpStream::connect("localhost:2001").expect("stream cannot be created");
-
-                let mut out = String::new();
-
-                stream.read_to_string(&mut out).expect("read body failed");
-
-                // dbg!(out);
-                println!("END {:?}", SystemTime::now());
-            });
-        dbg!(TOXIPROXY.all());
+            .map_err(|err| format!("<proxies> has failed: {}", err))
     }
 }
