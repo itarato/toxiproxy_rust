@@ -75,6 +75,7 @@ fn test_proxy_down() {
             let result = TOXIPROXY.find_proxy("socket");
             assert!(result.is_ok());
             assert!(!result.as_ref().unwrap().enabled);
+            let _ = !result.as_ref().unwrap().enabled;
         })
         .is_ok());
 
@@ -113,7 +114,6 @@ fn test_proxy_apply_with_latency() {
 
     let proxy_toxics = proxy_result.as_ref().unwrap().toxics();
     assert!(proxy_toxics.is_ok());
-    dbg!(&proxy_toxics);
     assert_eq!(0, proxy_toxics.as_ref().unwrap().len());
 }
 

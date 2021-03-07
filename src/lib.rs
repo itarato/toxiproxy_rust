@@ -138,11 +138,6 @@ impl Proxy {
         }
     }
 
-    fn with_client(mut self, client: Arc<Mutex<HttpClient>>) -> Self {
-        self.client = Some(client);
-        self
-    }
-
     fn disable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), false);
@@ -343,7 +338,7 @@ impl Toxiproxy {
         let proxies_json = serde_json::to_string(&proxies).unwrap();
         self.client
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .post_with_data("/populate", proxies_json)
             .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
             .map_err(|err| format!("<populate> has failed: {}", err))
@@ -353,7 +348,7 @@ impl Toxiproxy {
     pub fn reset(&self) -> Result<(), String> {
         self.client
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .post("/reset")
             .map(|_| ())
             .map_err(|err| format!("<reset> has failed: {}", err))
@@ -362,7 +357,7 @@ impl Toxiproxy {
     pub fn all(&self) -> Result<HashMap<String, Proxy>, String> {
         self.client
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .get("/proxies")
             .and_then(|response| {
                 response
@@ -384,7 +379,7 @@ impl Toxiproxy {
     pub fn version(&self) -> Result<String, String> {
         self.client
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .get("/version")
             .map(|ref mut response| {
                 let mut body = String::new();
@@ -402,13 +397,13 @@ impl Toxiproxy {
         let proxy_result = self
             .client
             .lock()
-            .expect("Client lock failed")
+            .expect(ERR_LOCK)
             .get(&path)
             .and_then(|response| response.json());
 
         proxy_result
-            .map(|proxy: Proxy| {
-                let proxy = proxy.with_client(self.client.clone());
+            .map(|mut proxy: Proxy| {
+                proxy.client = Some(self.client.clone());
                 proxy
                     .delete_all_toxics()
                     .expect("proxy cannot reset toxics");
