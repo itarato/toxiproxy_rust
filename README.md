@@ -40,6 +40,12 @@ TOXIPROXY.find_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0).a
 })?;
 ```
 
+Using a custom address for Toxiproxy server:
+
+```rust
+let toxiclient: Toxiproxy = Toxiproxy::new("1.2.3.4:5678".into());
+```
+
 ## Development
 
 Tests:
