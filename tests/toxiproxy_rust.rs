@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+use proxy::*;
 use toxiproxy_rust::*;
 
 /**
