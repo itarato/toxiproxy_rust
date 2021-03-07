@@ -33,7 +33,7 @@ impl Proxy {
     fn disable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), false);
-        let body = serde_json::to_string(&payload).expect("Failed serializing");
+        let body = serde_json::to_string(&payload).map_err(|_| ERR_JSON_SERIALIZE)?;
 
         self.update(body)
     }
@@ -41,7 +41,7 @@ impl Proxy {
     fn enable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), true);
-        let body = serde_json::to_string(&payload).expect("Failed serializing");
+        let body = serde_json::to_string(&payload).map_err(|_| ERR_JSON_SERIALIZE)?;
 
         self.update(body)
     }
