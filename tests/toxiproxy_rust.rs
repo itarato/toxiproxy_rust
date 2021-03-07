@@ -1,5 +1,11 @@
 #![deny(warnings)]
 
+use std::net::TcpListener;
+use std::net::TcpStream;
+use std::thread::spawn;
+use std::time::SystemTime;
+use std::{io::prelude::*, time::Duration};
+
 use proxy::*;
 use toxiproxy_rust::*;
 
@@ -118,6 +124,30 @@ fn test_proxy_apply_with_latency() {
     assert_eq!(0, proxy_toxics.as_ref().unwrap().len());
 }
 
+#[test]
+fn test_proxy_apply_with_latency_with_real_request() {
+    let server_thread = spawn(|| one_take_server());
+    populate_example();
+
+    let proxy_result = TOXIPROXY.find_proxy("socket");
+    assert!(proxy_result.is_ok());
+
+    let apply_result = proxy_result
+        .as_ref()
+        .unwrap()
+        .with_latency("downstream".into(), 2000, 0, 1.0)
+        .apply(|| {
+            let client_thread = spawn(|| one_shot_client());
+
+            server_thread.join().expect("Failed closing server thread");
+            let duration = client_thread.join().expect("Failed closing client thread");
+
+            assert!(duration.as_secs() >= 2);
+        });
+
+    assert!(apply_result.is_ok());
+}
+
 /**
  * Support functions.
  */
@@ -132,23 +162,37 @@ fn populate_example() {
     assert!(result.is_ok());
 }
 
-/*
+fn one_shot_client() -> Duration {
+    let t_start = SystemTime::now();
 
-// use std::io::prelude::*;
-// use std::net::TcpStream;
-// use std::time::SystemTime;
+    let mut stream = TcpStream::connect("localhost:2001").expect("Failed to connect to server");
 
-// println!("START {:?}", SystemTime::now());
+    stream
+        .write("hello".as_bytes())
+        .expect("Client failed sending request");
 
-// // dbg!(TOXIPROXY.all());
+    stream
+        .read(&mut [0u8; 1024])
+        .expect("Client failed reading response");
 
-// let mut stream =
-//     TcpStream::connect("localhost:2001").expect("stream cannot be created");
+    t_start.elapsed().expect("Cannot establish duration")
+}
 
-// let mut out = String::new();
+fn one_take_server() {
+    let mut stream = TcpListener::bind("localhost:2000")
+        .expect("TcpListener cannot connect")
+        .incoming()
+        .next()
+        .expect("Failed to listen for incoming")
+        .expect("Request failes");
 
-// stream.read_to_string(&mut out).expect("read body failed");
+    stream
+        .read(&mut [0u8; 1024])
+        .expect("Server failed reading request");
 
-// // dbg!(out);
-// println!("END {:?}", SystemTime::now());
- */
+    stream
+        .write("byebye".as_bytes())
+        .expect("Server failed writing response");
+
+    stream.flush().expect("Failed flushing connection");
+}
