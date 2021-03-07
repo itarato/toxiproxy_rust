@@ -3,6 +3,8 @@ name = "toxiproxy_rust"
 version = "0.1.0"
 authors = ["Peter Arato <it.arato@gmail.com>"]
 edition = "2018"
+description = "Lightweight client for Toxiproxy"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
