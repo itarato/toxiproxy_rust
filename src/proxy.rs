@@ -52,7 +52,7 @@ impl Proxy {
             .as_ref()
             .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .post_with_data(&path, payload)
             .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
@@ -65,7 +65,7 @@ impl Proxy {
             .as_ref()
             .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .delete(&path)
             .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
@@ -78,7 +78,7 @@ impl Proxy {
             .as_ref()
             .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .get(&path)
             .and_then(|response| response.json())
             .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
@@ -197,7 +197,7 @@ impl Proxy {
                         .as_ref()
                         .expect(ERR_MISSING_HTTP_CLIENT)
                         .lock()
-                        .expect(ERR_LOCK)
+                        .map_err(|err| format!("lock error: {}", err))?
                         .delete(&path);
 
                     if result.is_err() {

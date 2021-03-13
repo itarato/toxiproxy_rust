@@ -3,7 +3,6 @@ use serde_json;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Read};
 
-use super::consts::*;
 use super::http_client::*;
 use super::proxy::*;
 
@@ -23,7 +22,7 @@ impl Client {
         let proxies_json = serde_json::to_string(&proxies).unwrap();
         self.client
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .post_with_data("populate", proxies_json)
             .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
             .map_err(|err| format!("<populate> has failed: {}", err))
@@ -33,7 +32,7 @@ impl Client {
     pub fn reset(&self) -> Result<(), String> {
         self.client
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .post("reset")
             .map(|_| ())
             .map_err(|err| format!("<reset> has failed: {}", err))
@@ -42,7 +41,7 @@ impl Client {
     pub fn all(&self) -> Result<HashMap<String, Proxy>, String> {
         self.client
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .get("proxies")
             .and_then(|response| {
                 response
@@ -64,7 +63,7 @@ impl Client {
     pub fn version(&self) -> Result<String, String> {
         self.client
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .get("version")
             .map(|ref mut response| {
                 let mut body = String::new();
@@ -82,7 +81,7 @@ impl Client {
         let proxy_result = self
             .client
             .lock()
-            .expect(ERR_LOCK)
+            .map_err(|err| format!("lock error: {}", err))?
             .get(&path)
             .and_then(|response| response.json());
 
