@@ -11,5 +11,5 @@ use client::*;
 use consts::*;
 
 lazy_static! {
-    pub static ref TOXIPROXY: Client = Client::new(TOXIPROXY_DEFAULT_URI.into());
+    pub static ref TOXIPROXY: Client = Client::new(TOXIPROXY_DEFAULT_URI);
 }

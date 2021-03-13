@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
 use super::consts::*;
 use super::http_client::*;
 use super::toxic::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Proxy {
@@ -47,7 +46,7 @@ impl Proxy {
     }
 
     pub fn update(&self, payload: String) -> Result<(), String> {
-        let path = format!("/proxies/{}", self.name);
+        let path = format!("proxies/{}", self.name);
 
         self.client
             .as_ref()
@@ -60,7 +59,7 @@ impl Proxy {
     }
 
     pub fn delete(&self) -> Result<(), String> {
-        let path = format!("/proxies/{}", self.name);
+        let path = format!("proxies/{}", self.name);
 
         self.client
             .as_ref()
@@ -73,7 +72,7 @@ impl Proxy {
     }
 
     pub fn toxics(&self) -> Result<Vec<Toxic>, String> {
-        let path = format!("/proxies/{}/toxics", self.name);
+        let path = format!("proxies/{}/toxics", self.name);
 
         self.client
             .as_ref()
@@ -155,7 +154,7 @@ impl Proxy {
 
     fn create_toxic(&self, toxic: Toxic) -> &Self {
         let body = serde_json::to_string(&toxic).expect(ERR_JSON_SERIALIZE);
-        let path = format!("/proxies/{}/toxics", self.name);
+        let path = format!("proxies/{}/toxics", self.name);
 
         let _ = self
             .client
@@ -192,7 +191,7 @@ impl Proxy {
         self.toxics()
             .and_then(|toxic_list| {
                 for toxic in toxic_list {
-                    let path = format!("/proxies/{}/toxics/{}", self.name, toxic.name);
+                    let path = format!("proxies/{}/toxics/{}", self.name, toxic.name);
                     let result = self
                         .client
                         .as_ref()

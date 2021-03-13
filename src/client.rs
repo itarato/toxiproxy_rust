@@ -1,3 +1,4 @@
+use reqwest::IntoUrl;
 use serde_json;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Read};
@@ -11,7 +12,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(toxiproxy_base_uri: String) -> Self {
+    pub fn new(toxiproxy_base_uri: impl IntoUrl) -> Self {
         Self {
             client: Arc::new(Mutex::new(HttpClient::new(toxiproxy_base_uri))),
         }
@@ -22,7 +23,7 @@ impl Client {
         self.client
             .lock()
             .expect(ERR_LOCK)
-            .post_with_data("/populate", proxies_json)
+            .post_with_data("populate", proxies_json)
             .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
             .map_err(|err| format!("<populate> has failed: {}", err))
             .map(|ref mut response_obj| response_obj.remove("proxies").unwrap_or(vec![]))
@@ -32,7 +33,7 @@ impl Client {
         self.client
             .lock()
             .expect(ERR_LOCK)
-            .post("/reset")
+            .post("reset")
             .map(|_| ())
             .map_err(|err| format!("<reset> has failed: {}", err))
     }
@@ -41,7 +42,7 @@ impl Client {
         self.client
             .lock()
             .expect(ERR_LOCK)
-            .get("/proxies")
+            .get("proxies")
             .and_then(|response| {
                 response
                     .json()
@@ -63,7 +64,7 @@ impl Client {
         self.client
             .lock()
             .expect(ERR_LOCK)
-            .get("/version")
+            .get("version")
             .map(|ref mut response| {
                 let mut body = String::new();
                 response
@@ -75,7 +76,7 @@ impl Client {
     }
 
     pub fn find_proxy(&self, name: &str) -> Result<Proxy, String> {
-        let path = format!("/proxies/{}", name);
+        let path = format!("proxies/{}", name);
 
         let proxy_result = self
             .client

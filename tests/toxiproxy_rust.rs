@@ -82,7 +82,6 @@ fn test_proxy_down() {
             let result = TOXIPROXY.find_proxy("socket");
             assert!(result.is_ok());
             assert!(!result.as_ref().unwrap().enabled);
-            let _ = !result.as_ref().unwrap().enabled;
         })
         .is_ok());
 
