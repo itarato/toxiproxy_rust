@@ -7,6 +7,7 @@ use super::consts::*;
 use super::http_client::*;
 use super::proxy::*;
 
+#[derive(Clone)]
 pub struct Client {
     client: Arc<Mutex<HttpClient>>,
 }
