@@ -1,28 +1,29 @@
 use http;
-use reqwest::{self, blocking::Client, IntoUrl, Url};
+use reqwest::{blocking::Client, blocking::Response, Error, Url};
+use std::net::{SocketAddr, ToSocketAddrs};
 
 #[derive(Debug)]
 pub struct HttpClient {
     client: Client,
-    toxiproxy_base_uri: Url,
+    toxiproxy_addr: SocketAddr,
 }
 
 impl HttpClient {
-    pub(crate) fn new(toxiproxy_base_uri: impl IntoUrl) -> Self {
+    pub(crate) fn new<U: ToSocketAddrs>(toxiproxy_addr: U) -> Self {
         Self {
-            client: reqwest::blocking::Client::new(),
-            toxiproxy_base_uri: toxiproxy_base_uri.into_url().expect("Incorrect URL format"),
+            client: Client::new(),
+            toxiproxy_addr: toxiproxy_addr.to_socket_addrs().unwrap().next().unwrap(),
         }
     }
 
-    pub(crate) fn get(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    pub(crate) fn get(&self, path: &str) -> Result<Response, Error> {
         self.client
             .get(&self.uri_with_path(path))
             .header("Content-Type", "application/json")
             .send()
     }
 
-    pub(crate) fn post(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    pub(crate) fn post(&self, path: &str) -> Result<Response, Error> {
         self.client
             .post(&self.uri_with_path(path))
             .header("Content-Type", "application/json")
@@ -33,7 +34,7 @@ impl HttpClient {
         &self,
         path: &str,
         body: String,
-    ) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    ) -> Result<reqwest::blocking::Response, Error> {
         self.client
             .post(&self.uri_with_path(path))
             .header("Content-Type", "application/json")
@@ -41,7 +42,7 @@ impl HttpClient {
             .send()
     }
 
-    pub(crate) fn delete(&self, path: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    pub(crate) fn delete(&self, path: &str) -> Result<Response, Error> {
         self.client
             .delete(&self.uri_with_path(path))
             .header("Content-Type", "application/json")
@@ -49,22 +50,15 @@ impl HttpClient {
     }
 
     fn uri_with_path(&self, path: &str) -> String {
-        let mut full_uri: String = self.toxiproxy_base_uri.as_str().into();
+        let mut full_uri: String = "http://".into();
+        full_uri.push_str(&self.toxiproxy_addr.to_string());
+        full_uri.push('/');
         full_uri.push_str(path);
         full_uri
     }
 
     pub(crate) fn is_alive(&self) -> bool {
-        let addr = self
-            .toxiproxy_base_uri
-            .as_str()
-            .parse::<http::Uri>()
-            .expect("Toxiproxy URI provided is not valid")
-            .authority()
-            .expect("Invalid authority component")
-            .to_string();
-
-        std::net::TcpStream::connect(addr)
+        std::net::TcpStream::connect(self.toxiproxy_addr)
             .map(|_| true)
             .unwrap_or(false)
     }

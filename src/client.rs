@@ -1,5 +1,5 @@
-use reqwest::IntoUrl;
 use serde_json;
+use std::net::ToSocketAddrs;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Read};
 
@@ -12,9 +12,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(toxiproxy_base_uri: impl IntoUrl) -> Self {
+    pub fn new<U: ToSocketAddrs>(toxiproxy_addr: U) -> Self {
         Self {
-            client: Arc::new(Mutex::new(HttpClient::new(toxiproxy_base_uri))),
+            client: Arc::new(Mutex::new(HttpClient::new(toxiproxy_addr))),
         }
     }
 

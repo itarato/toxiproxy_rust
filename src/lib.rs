@@ -8,8 +8,7 @@ pub mod proxy;
 mod toxic;
 
 use client::*;
-use consts::*;
 
 lazy_static! {
-    pub static ref TOXIPROXY: Client = Client::new(TOXIPROXY_DEFAULT_URI);
+    pub static ref TOXIPROXY: Client = Client::new("127.0.0.1:8474");
 }
