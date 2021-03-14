@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub type ToxicValueType = u32;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Toxic {
+pub struct ToxicPack {
     pub name: String,
     r#type: String,
     stream: String,
@@ -12,7 +12,7 @@ pub struct Toxic {
     attributes: HashMap<String, ToxicValueType>,
 }
 
-impl Toxic {
+impl ToxicPack {
     pub(crate) fn new(
         r#type: String,
         stream: String,

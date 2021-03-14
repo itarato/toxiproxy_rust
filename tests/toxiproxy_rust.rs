@@ -25,7 +25,7 @@ fn test_reset() {
 
 #[test]
 fn test_populate() {
-    let result = TOXIPROXY.populate(vec![Proxy::new(
+    let result = TOXIPROXY.populate(vec![ProxyPack::new(
         "socket".into(),
         "localhost:2001".into(),
         "localhost:2000".into(),
@@ -34,7 +34,7 @@ fn test_populate() {
     assert!(result.is_ok());
 
     assert_eq!(1, result.as_ref().unwrap().len());
-    assert_eq!("socket", result.as_ref().unwrap()[0].name);
+    assert_eq!("socket", result.as_ref().unwrap()[0].proxy_pack.name);
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn test_find_proxy() {
     let result = TOXIPROXY.find_proxy("socket");
     assert!(result.is_ok());
 
-    assert_eq!("socket", result.as_ref().unwrap().name);
+    assert_eq!("socket", result.as_ref().unwrap().proxy_pack.name);
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn test_proxy_down() {
 
     let result = TOXIPROXY.find_proxy("socket");
     assert!(result.is_ok());
-    assert!(result.as_ref().unwrap().enabled);
+    assert!(result.as_ref().unwrap().proxy_pack.enabled);
 
     assert!(result
         .as_ref()
@@ -81,13 +81,13 @@ fn test_proxy_down() {
         .down(|| {
             let result = TOXIPROXY.find_proxy("socket");
             assert!(result.is_ok());
-            assert!(!result.as_ref().unwrap().enabled);
+            assert!(!result.as_ref().unwrap().proxy_pack.enabled);
         })
         .is_ok());
 
     let result = TOXIPROXY.find_proxy("socket");
     assert!(result.is_ok());
-    assert!(result.as_ref().unwrap().enabled);
+    assert!(result.as_ref().unwrap().proxy_pack.enabled);
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn test_proxy_apply_with_latency_with_real_request() {
  */
 
 fn populate_example() {
-    let result = TOXIPROXY.populate(vec![Proxy::new(
+    let result = TOXIPROXY.populate(vec![ProxyPack::new(
         "socket".into(),
         "localhost:2001".into(),
         "localhost:2000".into(),

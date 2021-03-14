@@ -18,15 +18,21 @@ impl Client {
         }
     }
 
-    pub fn populate(&self, proxies: Vec<Proxy>) -> Result<Vec<Proxy>, String> {
+    pub fn populate(&self, proxies: Vec<ProxyPack>) -> Result<Vec<Proxy>, String> {
         let proxies_json = serde_json::to_string(&proxies).unwrap();
         self.client
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .post_with_data("populate", proxies_json)
-            .and_then(|response| response.json::<HashMap<String, Vec<Proxy>>>())
+            .and_then(|response| response.json::<HashMap<String, Vec<ProxyPack>>>())
             .map_err(|err| format!("<populate> has failed: {}", err))
             .map(|ref mut response_obj| response_obj.remove("proxies").unwrap_or(vec![]))
+            .map(|proxy_packs| {
+                proxy_packs
+                    .into_iter()
+                    .map(|proxy_pack| Proxy::new(proxy_pack, self.client.clone()))
+                    .collect::<Vec<Proxy>>()
+            })
     }
 
     pub fn reset(&self) -> Result<(), String> {
@@ -46,11 +52,13 @@ impl Client {
             .and_then(|response| {
                 response
                     .json()
-                    .map(|mut proxy_map: HashMap<String, Proxy>| {
-                        for proxy in proxy_map.values_mut() {
-                            proxy.client = Some(self.client.clone());
-                        }
+                    .map(|proxy_map: HashMap<String, ProxyPack>| {
                         proxy_map
+                            .into_iter()
+                            .map(|(name, proxy_pack)| {
+                                (name, Proxy::new(proxy_pack, self.client.clone()))
+                            })
+                            .collect()
                     })
             })
             .map_err(|err| format!("<proxies> has failed: {}", err))
@@ -86,8 +94,8 @@ impl Client {
             .and_then(|response| response.json());
 
         proxy_result
-            .map(|mut proxy: Proxy| {
-                proxy.client = Some(self.client.clone());
+            .map(|proxy_pack: ProxyPack| {
+                let proxy = Proxy::new(proxy_pack, self.client.clone());
                 proxy
                     .delete_all_toxics()
                     .expect("proxy cannot reset toxics");

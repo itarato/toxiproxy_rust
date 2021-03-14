@@ -6,18 +6,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Proxy {
+pub struct ProxyPack {
     pub name: String,
     listen: String,
     upstream: String,
     pub enabled: bool,
-    toxics: Vec<Toxic>,
-
-    #[serde(skip)]
-    pub client: Option<Arc<Mutex<HttpClient>>>,
+    toxics: Vec<ToxicPack>,
 }
 
-impl Proxy {
+impl ProxyPack {
     pub fn new(name: String, listen: String, upstream: String) -> Self {
         Self {
             name,
@@ -25,8 +22,19 @@ impl Proxy {
             upstream,
             enabled: true,
             toxics: vec![],
-            client: None,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Proxy {
+    pub proxy_pack: ProxyPack,
+    pub client: Arc<Mutex<HttpClient>>,
+}
+
+impl Proxy {
+    pub fn new(proxy_pack: ProxyPack, client: Arc<Mutex<HttpClient>>) -> Self {
+        Self { proxy_pack, client }
     }
 
     fn disable(&self) -> Result<(), String> {
@@ -46,11 +54,9 @@ impl Proxy {
     }
 
     pub fn update(&self, payload: String) -> Result<(), String> {
-        let path = format!("proxies/{}", self.name);
+        let path = format!("proxies/{}", self.proxy_pack.name);
 
         self.client
-            .as_ref()
-            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .post_with_data(&path, payload)
@@ -59,11 +65,9 @@ impl Proxy {
     }
 
     pub fn delete(&self) -> Result<(), String> {
-        let path = format!("proxies/{}", self.name);
+        let path = format!("proxies/{}", self.proxy_pack.name);
 
         self.client
-            .as_ref()
-            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .delete(&path)
@@ -71,12 +75,10 @@ impl Proxy {
             .map(|_| ())
     }
 
-    pub fn toxics(&self) -> Result<Vec<Toxic>, String> {
-        let path = format!("proxies/{}/toxics", self.name);
+    pub fn toxics(&self) -> Result<Vec<ToxicPack>, String> {
+        let path = format!("proxies/{}/toxics", self.proxy_pack.name);
 
         self.client
-            .as_ref()
-            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .get(&path)
@@ -95,21 +97,31 @@ impl Proxy {
         attributes.insert("latency".into(), latency);
         attributes.insert("jitter".into(), jitter);
 
-        self.create_toxic(Toxic::new("latency".into(), stream, toxicity, attributes))
+        self.create_toxic(ToxicPack::new(
+            "latency".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
     }
 
     pub fn with_bandwidth(&self, stream: String, rate: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("rate".into(), rate);
 
-        self.create_toxic(Toxic::new("bandwidth".into(), stream, toxicity, attributes))
+        self.create_toxic(ToxicPack::new(
+            "bandwidth".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
     }
 
     pub fn with_slow_close(&self, stream: String, delay: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("delay".into(), delay);
 
-        self.create_toxic(Toxic::new(
+        self.create_toxic(ToxicPack::new(
             "slow_close".into(),
             stream,
             toxicity,
@@ -121,7 +133,12 @@ impl Proxy {
         let mut attributes = HashMap::new();
         attributes.insert("timeout".into(), timeout);
 
-        self.create_toxic(Toxic::new("timeout".into(), stream, toxicity, attributes))
+        self.create_toxic(ToxicPack::new(
+            "timeout".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
     }
 
     pub fn with_slicer(
@@ -137,14 +154,19 @@ impl Proxy {
         attributes.insert("size_variation".into(), size_variation);
         attributes.insert("delay".into(), delay);
 
-        self.create_toxic(Toxic::new("slicer".into(), stream, toxicity, attributes))
+        self.create_toxic(ToxicPack::new(
+            "slicer".into(),
+            stream,
+            toxicity,
+            attributes,
+        ))
     }
 
     pub fn with_limit_data(&self, stream: String, bytes: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("bytes".into(), bytes);
 
-        self.create_toxic(Toxic::new(
+        self.create_toxic(ToxicPack::new(
             "limit_data".into(),
             stream,
             toxicity,
@@ -152,14 +174,12 @@ impl Proxy {
         ))
     }
 
-    fn create_toxic(&self, toxic: Toxic) -> &Self {
+    fn create_toxic(&self, toxic: ToxicPack) -> &Self {
         let body = serde_json::to_string(&toxic).expect(ERR_JSON_SERIALIZE);
-        let path = format!("proxies/{}/toxics", self.name);
+        let path = format!("proxies/{}/toxics", self.proxy_pack.name);
 
         let _ = self
             .client
-            .as_ref()
-            .expect(ERR_MISSING_HTTP_CLIENT)
             .lock()
             .expect(ERR_LOCK)
             .post_with_data(&path, body)
@@ -191,11 +211,9 @@ impl Proxy {
         self.toxics()
             .and_then(|toxic_list| {
                 for toxic in toxic_list {
-                    let path = format!("proxies/{}/toxics/{}", self.name, toxic.name);
+                    let path = format!("proxies/{}/toxics/{}", self.proxy_pack.name, toxic.name);
                     let result = self
                         .client
-                        .as_ref()
-                        .expect(ERR_MISSING_HTTP_CLIENT)
                         .lock()
                         .map_err(|err| format!("lock error: {}", err))?
                         .delete(&path);
