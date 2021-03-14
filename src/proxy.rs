@@ -82,8 +82,11 @@ impl Proxy {
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .get(&path)
-            .and_then(|response| response.json())
-            .map_err(|err| format!("<proxies>.<toxics> has failed: {}", err))
+            .and_then(|response| {
+                response
+                    .json()
+                    .map_err(|err| format!("json deserialize failed: {}", err))
+            })
     }
 
     pub fn with_latency(

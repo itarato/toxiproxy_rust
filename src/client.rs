@@ -24,8 +24,11 @@ impl Client {
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .post_with_data("populate", proxies_json)
-            .and_then(|response| response.json::<HashMap<String, Vec<ProxyPack>>>())
-            .map_err(|err| format!("<populate> has failed: {}", err))
+            .and_then(|response| {
+                response
+                    .json::<HashMap<String, Vec<ProxyPack>>>()
+                    .map_err(|err| format!("json deserialize failed: {}", err))
+            })
             .map(|ref mut response_obj| response_obj.remove("proxies").unwrap_or(vec![]))
             .map(|proxy_packs| {
                 proxy_packs
@@ -60,8 +63,8 @@ impl Client {
                             })
                             .collect()
                     })
+                    .map_err(|err| format!("json deserialize failed: {}", err))
             })
-            .map_err(|err| format!("<proxies> has failed: {}", err))
     }
 
     pub fn is_running(&self) -> bool {
@@ -91,7 +94,11 @@ impl Client {
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .get(&path)
-            .and_then(|response| response.json());
+            .and_then(|response| {
+                response
+                    .json()
+                    .map_err(|err| format!("json deserialize failed: {}", err))
+            });
 
         proxy_result
             .map(|proxy_pack: ProxyPack| {

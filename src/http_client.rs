@@ -1,6 +1,8 @@
-use http;
-use reqwest::{blocking::Client, blocking::Response, Error, Url};
-use std::net::{SocketAddr, ToSocketAddrs};
+use reqwest::{blocking::Client, blocking::Response, Url};
+use std::{
+    net::{SocketAddr, ToSocketAddrs},
+    str::FromStr,
+};
 
 #[derive(Debug)]
 pub struct HttpClient {
@@ -16,45 +18,49 @@ impl HttpClient {
         }
     }
 
-    pub(crate) fn get(&self, path: &str) -> Result<Response, Error> {
+    pub(crate) fn get(&self, path: &str) -> Result<Response, String> {
         self.client
-            .get(&self.uri_with_path(path))
+            .get(self.uri_with_path(path)?)
             .header("Content-Type", "application/json")
             .send()
+            .map_err(|err| format!("GET error: {}", err))
     }
 
-    pub(crate) fn post(&self, path: &str) -> Result<Response, Error> {
+    pub(crate) fn post(&self, path: &str) -> Result<Response, String> {
         self.client
-            .post(&self.uri_with_path(path))
+            .post(self.uri_with_path(path)?)
             .header("Content-Type", "application/json")
             .send()
+            .map_err(|err| format!("POST error: {}", err))
     }
 
-    pub(crate) fn post_with_data(
-        &self,
-        path: &str,
-        body: String,
-    ) -> Result<reqwest::blocking::Response, Error> {
+    pub(crate) fn post_with_data(&self, path: &str, body: String) -> Result<Response, String> {
         self.client
-            .post(&self.uri_with_path(path))
+            .post(self.uri_with_path(path)?)
             .header("Content-Type", "application/json")
             .body(body)
             .send()
+            .map_err(|err| format!("POST error: {}", err))
     }
 
-    pub(crate) fn delete(&self, path: &str) -> Result<Response, Error> {
+    pub(crate) fn delete(&self, path: &str) -> Result<Response, String> {
         self.client
-            .delete(&self.uri_with_path(path))
+            .delete(self.uri_with_path(path)?)
             .header("Content-Type", "application/json")
             .send()
+            .map_err(|err| format!("DELETE error: {}", err))
     }
 
-    fn uri_with_path(&self, path: &str) -> String {
-        let mut full_uri: String = "http://".into();
-        full_uri.push_str(&self.toxiproxy_addr.to_string());
-        full_uri.push('/');
-        full_uri.push_str(path);
-        full_uri
+    fn uri_with_path(&self, path: &str) -> Result<Url, String> {
+        let mut base: String = "http://".into();
+        base.push_str(&self.toxiproxy_addr.to_string());
+
+        let mut url = Url::from_str(&base).map_err(|err| format!("Incorrect address: {}", err))?;
+
+        url.set_scheme("http")
+            .map_err(|_| "invalid scheme".to_owned())?;
+        url.set_path(path);
+        Ok(url)
     }
 
     pub(crate) fn is_alive(&self) -> bool {
