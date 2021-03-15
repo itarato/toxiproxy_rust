@@ -1,3 +1,5 @@
+//! Main client for communicating with the Toxiproxy server.
+
 use serde_json;
 use std::net::ToSocketAddrs;
 use std::sync::{Arc, Mutex};

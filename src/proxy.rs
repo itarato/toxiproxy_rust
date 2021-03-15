@@ -1,3 +1,7 @@
+//! Represents a [Proxy].
+//!
+//! [Proxy]: https://github.com/Shopify/toxiproxy#2-populating-toxiproxy
+
 use super::consts::*;
 use super::http_client::*;
 use super::toxic::*;
@@ -8,10 +12,10 @@ use std::sync::{Arc, Mutex};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProxyPack {
     pub name: String,
-    listen: String,
-    upstream: String,
+    pub listen: String,
+    pub upstream: String,
     pub enabled: bool,
-    toxics: Vec<ToxicPack>,
+    pub toxics: Vec<ToxicPack>,
 }
 
 impl ProxyPack {
@@ -29,7 +33,7 @@ impl ProxyPack {
 #[derive(Debug)]
 pub struct Proxy {
     pub proxy_pack: ProxyPack,
-    pub client: Arc<Mutex<HttpClient>>,
+    client: Arc<Mutex<HttpClient>>,
 }
 
 impl Proxy {

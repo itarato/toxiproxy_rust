@@ -40,6 +40,27 @@ TOXIPROXY.find_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0).a
 })?;
 ```
 
+Or without a safe lambda (that takes care of resetting a proxy):
+
+
+```rust
+TOXIPROXY.find_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0)
+// Calling the desired service...
+
+TOXIPROXY.find_proxy("redis")?.disable();
+// Test unavailability.
+TOXIPROXY.find_proxy("redis")?.enable();
+```
+
+Supported toxics:
+- [latency](https://github.com/Shopify/toxiproxy#latency)
+- [down](https://github.com/Shopify/toxiproxy#down)
+- [bandwith](https://github.com/Shopify/toxiproxy#bandwith)
+- [slow close](https://github.com/Shopify/toxiproxy#slow_close)
+- [timeout](https://github.com/Shopify/toxiproxy#timeout)
+- [slicer](https://github.com/Shopify/toxiproxy#slicer)
+- [limit data](https://github.com/Shopify/toxiproxy#limit_data)
+
 Using a custom address for Toxiproxy server:
 
 ```rust
