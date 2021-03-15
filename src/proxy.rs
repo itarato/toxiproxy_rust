@@ -37,7 +37,7 @@ impl Proxy {
         Self { proxy_pack, client }
     }
 
-    fn disable(&self) -> Result<(), String> {
+    pub fn disable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), false);
         let body = serde_json::to_string(&payload).map_err(|_| ERR_JSON_SERIALIZE)?;
@@ -45,7 +45,7 @@ impl Proxy {
         self.update(body)
     }
 
-    fn enable(&self) -> Result<(), String> {
+    pub fn enable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), true);
         let body = serde_json::to_string(&payload).map_err(|_| ERR_JSON_SERIALIZE)?;
@@ -193,7 +193,7 @@ impl Proxy {
         self
     }
 
-    pub fn down<F>(&self, closure: F) -> Result<(), String>
+    pub fn with_down<F>(&self, closure: F) -> Result<(), String>
     where
         F: FnOnce(),
     {

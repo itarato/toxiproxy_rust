@@ -78,7 +78,7 @@ fn test_proxy_down() {
     assert!(result
         .as_ref()
         .unwrap()
-        .down(|| {
+        .with_down(|| {
             let result = TOXIPROXY.find_proxy("socket");
             assert!(result.is_ok());
             assert!(!result.as_ref().unwrap().proxy_pack.enabled);
@@ -121,6 +121,32 @@ fn test_proxy_apply_with_latency() {
     let proxy_toxics = proxy_result.as_ref().unwrap().toxics();
     assert!(proxy_toxics.is_ok());
     assert_eq!(0, proxy_toxics.as_ref().unwrap().len());
+}
+
+#[test]
+fn test_proxy_apply_with_latency_as_separate_calls_for_test() {
+    populate_example();
+
+    let proxy_result = TOXIPROXY.find_proxy("socket");
+    assert!(proxy_result.is_ok());
+
+    let proxy_toxics = proxy_result.as_ref().unwrap().toxics();
+    assert!(proxy_toxics.is_ok());
+    assert_eq!(0, proxy_toxics.as_ref().unwrap().len());
+
+    let _ = proxy_result
+        .as_ref()
+        .unwrap()
+        .with_latency("downstream".into(), 2000, 0, 1.0);
+
+    let all = TOXIPROXY.all();
+    assert!(all.is_ok());
+    let proxy = all.as_ref().unwrap().get("socket");
+    assert!(proxy.is_some());
+
+    let proxy_toxics = proxy.as_ref().unwrap().toxics();
+    assert!(proxy_toxics.is_ok());
+    assert_eq!(1, proxy_toxics.as_ref().unwrap().len());
 }
 
 #[test]
