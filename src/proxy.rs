@@ -1,7 +1,8 @@
 //! Represents a [Proxy] - a connection to a service. Connection reliability can be set by
-//! specifying a toxic on it.
+//! specifying a [`Toxic`] on it.
 //!
 //! [Proxy]: https://github.com/Shopify/toxiproxy#2-populating-toxiproxy
+//! [`Toxic`]: toxic.ToxicPack.html
 
 use super::consts::*;
 use super::http_client::*;
@@ -10,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+/// Raw info about a Proxy.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProxyPack {
     pub name: String,
@@ -20,6 +22,17 @@ pub struct ProxyPack {
 }
 
 impl ProxyPack {
+    /// Create a new Proxy configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let proxy_pack = toxiproxy_rust::proxy::ProxyPack::new(
+    ///     "socket".into(),
+    ///     "localhost:2001".into(),
+    ///     "localhost:2000".into(),
+    /// );
+    /// ```
     pub fn new(name: String, listen: String, upstream: String) -> Self {
         Self {
             name,
@@ -31,6 +44,7 @@ impl ProxyPack {
     }
 }
 
+/// Client handler of the Proxy object.
 #[derive(Debug)]
 pub struct Proxy {
     pub proxy_pack: ProxyPack,
@@ -38,10 +52,32 @@ pub struct Proxy {
 }
 
 impl Proxy {
+    /// Create a new proxy handler.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::{Arc, Mutex};
+    ///
+    /// let proxy_pack = toxiproxy_rust::proxy::ProxyPack::new(
+    ///     "socket".into(),
+    ///     "localhost:2001".into(),
+    ///     "localhost:2000".into(),
+    /// );
+    /// let client = Acr::new(Mutex::new(toxiproxy_rust::client::Client::new("127.0.0.1:8474")));
+    /// let proxy = toxiproxy_rust::proxy::Proxy::new(proxy_pack, client.clone);
+    /// ```
     pub fn new(proxy_pack: ProxyPack, client: Arc<Mutex<HttpClient>>) -> Self {
         Self { proxy_pack, client }
     }
 
+    /// Disables the proxy - making all connections running through them fail immediately.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().disable();
+    /// ```
     pub fn disable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), false);
@@ -50,6 +86,13 @@ impl Proxy {
         self.update(body)
     }
 
+    /// Enables the proxy.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().enable();
+    /// ```
     pub fn enable(&self) -> Result<(), String> {
         let mut payload: HashMap<String, bool> = HashMap::new();
         payload.insert("enabled".into(), true);
@@ -58,7 +101,7 @@ impl Proxy {
         self.update(body)
     }
 
-    pub fn update(&self, payload: String) -> Result<(), String> {
+    fn update(&self, payload: String) -> Result<(), String> {
         let path = format!("proxies/{}", self.proxy_pack.name);
 
         self.client
@@ -68,6 +111,13 @@ impl Proxy {
             .map(|_| ())
     }
 
+    /// Removes the proxy and all of its toxics.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().delete();
+    /// ```
     pub fn delete(&self) -> Result<(), String> {
         let path = format!("proxies/{}", self.proxy_pack.name);
 
@@ -78,6 +128,13 @@ impl Proxy {
             .map(|_| ())
     }
 
+    /// Retrieve all toxics registered on the proxy.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let toxics = toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().toxics().unwrap();
+    /// ```
     pub fn toxics(&self) -> Result<Vec<ToxicPack>, String> {
         let path = format!("proxies/{}/toxics", self.proxy_pack.name);
 
@@ -92,6 +149,18 @@ impl Proxy {
             })
     }
 
+    /// Registers a [latency] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_latency("downstream", 2000, 0.0, 1.0);
+    /// ```
+    ///
+    /// [latency]: https://github.com/Shopify/toxiproxy#latency
     pub fn with_latency(
         &self,
         stream: String,
@@ -111,6 +180,18 @@ impl Proxy {
         ))
     }
 
+    /// Registers a [bandwith] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_bandwidth("downstream", 500, 1.0);
+    /// ```
+    ///
+    /// [bandwith]: https://github.com/Shopify/toxiproxy#bandwith
     pub fn with_bandwidth(&self, stream: String, rate: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("rate".into(), rate);
@@ -123,6 +204,18 @@ impl Proxy {
         ))
     }
 
+    /// Registers a [slow_close] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_slow_close("downstream", 500, 1.0);
+    /// ```
+    ///
+    /// [slow_close]: https://github.com/Shopify/toxiproxy#slow_close
     pub fn with_slow_close(&self, stream: String, delay: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("delay".into(), delay);
@@ -135,6 +228,18 @@ impl Proxy {
         ))
     }
 
+    /// Registers a [timeout] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_timeout("downstream", 5000, 1.0);
+    /// ```
+    ///
+    /// [timeout]: https://github.com/Shopify/toxiproxy#timeout
     pub fn with_timeout(&self, stream: String, timeout: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("timeout".into(), timeout);
@@ -147,6 +252,18 @@ impl Proxy {
         ))
     }
 
+    /// Registers a [slicer] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_slicer("downstream", 1024, 128, 1.0);
+    /// ```
+    ///
+    /// [slicer]: https://github.com/Shopify/toxiproxy#slicer
     pub fn with_slicer(
         &self,
         stream: String,
@@ -168,6 +285,18 @@ impl Proxy {
         ))
     }
 
+    /// Registers a [limit_data] Toxic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_limit_data("downstream", 2048 1.0);
+    /// ```
+    ///
+    /// [limit_data]: https://github.com/Shopify/toxiproxy#limit_data
     pub fn with_limit_data(&self, stream: String, bytes: ToxicValueType, toxicity: f32) -> &Self {
         let mut attributes = HashMap::new();
         attributes.insert("bytes".into(), bytes);
@@ -196,6 +325,23 @@ impl Proxy {
         self
     }
 
+    /// Runs a call as if the proxy was [disabled].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_down("downstream", || {
+    ///     /* Example test:
+    ///        let service_result = MyService::Server::call(params);
+    ///        assert!(service_result.is_err());
+    ///     /*
+    ///   });
+    /// ```
+    ///
+    /// [disabled]: https://github.com/Shopify/toxiproxy#down
     pub fn with_down<F>(&self, closure: F) -> Result<(), String>
     where
         F: FnOnce(),
@@ -205,6 +351,26 @@ impl Proxy {
         self.enable()
     }
 
+    /// Runs a call with the current Toxic setup for the proxy.
+    /// It restores proxy state after the call.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .with_limit_data("downstream", 2048 1.0)
+    ///   .apply(|| {
+    ///     /* Example test:
+    ///        let service_result = MyService::Server::call(giant_payload);
+    ///        assert!(service_result.is_err());
+    ///
+    ///        let service_result = MyService::Server::call(small_payload);
+    ///        assert!(service_result.is_ok());
+    ///     /*
+    ///   });
+    /// ```
     pub fn apply<F>(&self, closure: F) -> Result<(), String>
     where
         F: FnOnce(),
@@ -213,6 +379,16 @@ impl Proxy {
         self.delete_all_toxics()
     }
 
+    /// Deletes all toxics on the proxy.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// toxiproxy_rust::TOXIPROXY
+    ///   .find_proxy("socket")
+    ///   .unwrap()
+    ///   .delete_all_toxics();
+    /// ```
     pub fn delete_all_toxics(&self) -> Result<(), String> {
         self.toxics().and_then(|toxic_list| {
             for toxic in toxic_list {

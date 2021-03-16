@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 pub type ToxicValueType = u32;
 
+/// Config of a Toxic.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ToxicPack {
     pub name: String,
