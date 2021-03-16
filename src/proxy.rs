@@ -1,4 +1,5 @@
-//! Represents a [Proxy].
+//! Represents a [Proxy] - a connection to a service. Connection reliability can be set by
+//! specifying a toxic on it.
 //!
 //! [Proxy]: https://github.com/Shopify/toxiproxy#2-populating-toxiproxy
 
@@ -64,7 +65,6 @@ impl Proxy {
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .post_with_data(&path, payload)
-            .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
     }
 
@@ -75,7 +75,6 @@ impl Proxy {
             .lock()
             .map_err(|err| format!("lock error: {}", err))?
             .delete(&path)
-            .map_err(|err| format!("<disable> has failed: {}", err))
             .map(|_| ())
     }
 
@@ -215,26 +214,16 @@ impl Proxy {
     }
 
     pub fn delete_all_toxics(&self) -> Result<(), String> {
-        self.toxics()
-            .and_then(|toxic_list| {
-                for toxic in toxic_list {
-                    let path = format!("proxies/{}/toxics/{}", self.proxy_pack.name, toxic.name);
-                    let result = self
-                        .client
-                        .lock()
-                        .map_err(|err| format!("lock error: {}", err))?
-                        .delete(&path);
+        self.toxics().and_then(|toxic_list| {
+            for toxic in toxic_list {
+                let path = format!("proxies/{}/toxics/{}", self.proxy_pack.name, toxic.name);
+                self.client
+                    .lock()
+                    .map_err(|err| format!("lock error: {}", err))?
+                    .delete(&path)?;
+            }
 
-                    if result.is_err() {
-                        return Err(format!(
-                            "<proxies>.<toxics> delete failed: {}",
-                            result.err().unwrap()
-                        ));
-                    }
-                }
-
-                Ok(())
-            })
-            .map_err(|err| format!("cannot delete toxics: {}", err))
+            Ok(())
+        })
     }
 }

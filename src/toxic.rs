@@ -1,6 +1,6 @@
-//! Represents a [Toxic].
+//! Represents a [Toxic] - an effect on the network connection.
 //!
-//! [Proxy]: https://github.com/Shopify/toxiproxy#toxics
+//! [Toxic]: https://github.com/Shopify/toxiproxy#toxics
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

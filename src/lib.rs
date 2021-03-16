@@ -16,5 +16,6 @@ pub mod toxic;
 use client::*;
 
 lazy_static! {
+    /// Pre-built client using the default connection address.
     pub static ref TOXIPROXY: Client = Client::new("127.0.0.1:8474");
 }
