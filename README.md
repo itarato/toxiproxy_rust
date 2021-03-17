@@ -27,7 +27,7 @@ let proxies = TOXIPROXY.populate(vec![
 Testing with an unavailable connection:
 
 ```rust
-TOXIPROXY.find_proxy("redis")?.down(|| {
+TOXIPROXY.find_and_reset_proxy("redis")?.with_down(|| {
   // Calling the desired service...
 })?;
 ```
@@ -35,7 +35,7 @@ TOXIPROXY.find_proxy("redis")?.down(|| {
 Testing with toxics (for full documentation on available toxics see [the original docs](https://github.com/Shopify/toxiproxy#toxics)):
 
 ```rust
-TOXIPROXY.find_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0).apply(|| {
+TOXIPROXY.find_and_reset_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0).apply(|| {
   // Calling the desired service...
 })?;
 ```

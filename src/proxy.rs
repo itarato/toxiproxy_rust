@@ -260,7 +260,7 @@ impl Proxy {
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_slicer("downstream", 1024, 128, 1.0);
+    ///   .with_slicer("downstream", 1024, 128, 500, 1.0);
     /// ```
     ///
     /// [slicer]: https://github.com/Shopify/toxiproxy#slicer
@@ -293,7 +293,7 @@ impl Proxy {
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_limit_data("downstream", 2048 1.0);
+    ///   .with_limit_data("downstream", 2048, 1.0);
     /// ```
     ///
     /// [limit_data]: https://github.com/Shopify/toxiproxy#limit_data
@@ -360,7 +360,7 @@ impl Proxy {
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_limit_data("downstream", 2048 1.0)
+    ///   .with_limit_data("downstream", 2048, 1.0)
     ///   .apply(|| {
     ///     /* Example test:
     ///        let service_result = MyService::Server::call(giant_payload);
