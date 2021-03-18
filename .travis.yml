@@ -1,9 +1,6 @@
 language: rust
 before_install:
-  - wget -O go.tar.gz https://golang.org/dl/go1.16.2.linux-amd64.tar.gz
-  - tar -C ./ -xzf go.tar.gz
-  - export PATH=./go/bin:$PATH
-  - go version
+  - travis_install_go_dependencies 1.16
   - git clone https://github.com/Shopify/toxiproxy.git
   - cd toxiproxy
   - make build
