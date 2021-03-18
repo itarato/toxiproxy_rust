@@ -1,7 +1,7 @@
 language: rust
 before_install:
-  - wget -O https://golang.org/dl/go1.16.2.linux-amd64.tar.gz
-  - tar -C ./ -xzf go1.16.2.linux-amd64.tar.gz
+  - wget -O go.tar.gz https://golang.org/dl/go1.16.2.linux-amd64.tar.gz
+  - tar -C ./ -xzf go.tar.gz
   - export PATH=$PATH:./go/bin
   - git clone https://github.com/Shopify/toxiproxy.git
   - cd toxiproxy
