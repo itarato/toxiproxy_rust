@@ -1,8 +1,5 @@
 language: rust
 before_install:
-  - go version
-  - which go
-  - sudo rm -rf `which go`
   - wget -O go.tar.gz https://golang.org/dl/go1.16.2.linux-amd64.tar.gz
   - tar -C $HOME -xzf go.tar.gz
   - export PATH=$HOME/go/bin:$PATH
@@ -14,3 +11,6 @@ before_install:
   - cd toxiproxy
   - make build
   - ./toxiproxy-server &
+script:
+  - cargo test --verbose -- --test-threads 1
+  
