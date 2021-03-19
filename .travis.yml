@@ -4,10 +4,10 @@ before_install:
   - which go
   - sudo rm -rf `which go`
   - wget -O go.tar.gz https://golang.org/dl/go1.16.2.linux-amd64.tar.gz
-  - tar -C ./ -xzf go.tar.gz
-  - export PATH=./go/bin:$PATH
-  - export GOPATH=./go
-  - export GOBIN=./go/bin
+  - tar -C $HOME -xzf go.tar.gz
+  - export PATH=$HOME/go/bin:$PATH
+  - export GOPATH=$HOME/go
+  - export GOBIN=$HOME/go/bin
   - go version
   - git clone https://github.com/Shopify/toxiproxy.git
   - cd toxiproxy
