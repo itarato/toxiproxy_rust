@@ -8,6 +8,7 @@ before_install:
   - export PATH=$HOME/go/bin:$PATH
   - export GOPATH=$HOME/go
   - export GOBIN=$HOME/go/bin
+  - export GOROOT=$HOME/go
   - go version
   - git clone https://github.com/Shopify/toxiproxy.git
   - cd toxiproxy
