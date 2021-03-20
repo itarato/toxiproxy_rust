@@ -52,22 +52,7 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    /// Create a new proxy handler.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::sync::{Arc, Mutex};
-    ///
-    /// let proxy_pack = toxiproxy_rust::proxy::ProxyPack::new(
-    ///     "socket".into(),
-    ///     "localhost:2001".into(),
-    ///     "localhost:2000".into(),
-    /// );
-    /// let client = Acr::new(Mutex::new(toxiproxy_rust::client::Client::new("127.0.0.1:8474")));
-    /// let proxy = toxiproxy_rust::proxy::Proxy::new(proxy_pack, client.clone);
-    /// ```
-    pub fn new(proxy_pack: ProxyPack, client: Arc<Mutex<HttpClient>>) -> Self {
+    pub(crate) fn new(proxy_pack: ProxyPack, client: Arc<Mutex<HttpClient>>) -> Self {
         Self { proxy_pack, client }
     }
 
@@ -76,6 +61,11 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().disable();
     /// ```
     pub fn disable(&self) -> Result<(), String> {
@@ -91,6 +81,11 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().enable();
     /// ```
     pub fn enable(&self) -> Result<(), String> {
@@ -116,6 +111,11 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().delete();
     /// ```
     pub fn delete(&self) -> Result<(), String> {
@@ -133,6 +133,11 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// let toxics = toxiproxy_rust::TOXIPROXY.find_proxy("socket").unwrap().toxics().unwrap();
     /// ```
     pub fn toxics(&self) -> Result<Vec<ToxicPack>, String> {
@@ -154,10 +159,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_latency("downstream", 2000, 0.0, 1.0);
+    ///   .with_latency("downstream".into(), 2000, 0, 1.0);
     /// ```
     ///
     /// [latency]: https://github.com/Shopify/toxiproxy#latency
@@ -185,10 +195,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_bandwidth("downstream", 500, 1.0);
+    ///   .with_bandwidth("downstream".into(), 500, 1.0);
     /// ```
     ///
     /// [bandwith]: https://github.com/Shopify/toxiproxy#bandwith
@@ -209,10 +224,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_slow_close("downstream", 500, 1.0);
+    ///   .with_slow_close("downstream".into(), 500, 1.0);
     /// ```
     ///
     /// [slow_close]: https://github.com/Shopify/toxiproxy#slow_close
@@ -233,10 +253,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_timeout("downstream", 5000, 1.0);
+    ///   .with_timeout("downstream".into(), 5000, 1.0);
     /// ```
     ///
     /// [timeout]: https://github.com/Shopify/toxiproxy#timeout
@@ -257,10 +282,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_slicer("downstream", 1024, 128, 500, 1.0);
+    ///   .with_slicer("downstream".into(), 1024, 128, 500, 1.0);
     /// ```
     ///
     /// [slicer]: https://github.com/Shopify/toxiproxy#slicer
@@ -290,10 +320,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_limit_data("downstream", 2048, 1.0);
+    ///   .with_limit_data("downstream".into(), 2048, 1.0);
     /// ```
     ///
     /// [limit_data]: https://github.com/Shopify/toxiproxy#limit_data
@@ -330,14 +365,19 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_down("downstream", || {
+    ///   .with_down(|| {
     ///     /* Example test:
     ///        let service_result = MyService::Server::call(params);
     ///        assert!(service_result.is_err());
-    ///     /*
+    ///     */
     ///   });
     /// ```
     ///
@@ -357,10 +397,15 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()
-    ///   .with_limit_data("downstream", 2048, 1.0)
+    ///   .with_limit_data("downstream".into(), 2048, 1.0)
     ///   .apply(|| {
     ///     /* Example test:
     ///        let service_result = MyService::Server::call(giant_payload);
@@ -368,7 +413,7 @@ impl Proxy {
     ///
     ///        let service_result = MyService::Server::call(small_payload);
     ///        assert!(service_result.is_ok());
-    ///     /*
+    ///     */
     ///   });
     /// ```
     pub fn apply<F>(&self, closure: F) -> Result<(), String>
@@ -384,6 +429,11 @@ impl Proxy {
     /// # Examples
     ///
     /// ```
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]);
     /// toxiproxy_rust::TOXIPROXY
     ///   .find_proxy("socket")
     ///   .unwrap()

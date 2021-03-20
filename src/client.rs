@@ -21,8 +21,7 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use toxiproxy_rust::client::Client;
-    ///
+    /// # use toxiproxy_rust::client::Client;
     /// let client = Client::new("127.0.0.1:8474");
     /// ```
     pub fn new<U: ToSocketAddrs>(toxiproxy_addr: U) -> Self {
@@ -36,9 +35,8 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use toxiproxy_rust::client::Client;
-    /// use toxiproxy_rust::proxy::ProxyPack;
-    ///
+    /// # use toxiproxy_rust::client::Client;
+    /// # use toxiproxy_rust::proxy::ProxyPack;
     /// let client = Client::new("127.0.0.1:8474");
     /// let proxies = client.populate(vec![ProxyPack::new(
     ///     "socket".into(),
@@ -79,9 +77,8 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use toxiproxy_rust::client::Client;
-    /// use toxiproxy_rust::proxy::ProxyPack;
-    ///
+    /// # use toxiproxy_rust::client::Client;
+    /// # use toxiproxy_rust::proxy::ProxyPack;
     /// let client = Client::new("127.0.0.1:8474");
     /// client.reset();
     /// ```
@@ -142,11 +139,6 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
-    ///     "socket".into(),
-    ///     "localhost:2001".into(),
-    ///     "localhost:2000".into(),
-    /// )]).unwrap();
     /// let version = toxiproxy_rust::TOXIPROXY.version().expect("version is returned");
     /// ```
     pub fn version(&self) -> Result<String, String> {
@@ -169,11 +161,11 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
-    ///     "socket".into(),
-    ///     "localhost:2001".into(),
-    ///     "localhost:2000".into(),
-    /// )]).unwrap();
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]).unwrap();
     /// let proxy = toxiproxy_rust::TOXIPROXY.find_and_reset_proxy("socket").expect("proxy returned");
     /// ```
     pub fn find_and_reset_proxy(&self, name: &str) -> Result<Proxy, String> {
@@ -190,11 +182,11 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
-    ///     "socket".into(),
-    ///     "localhost:2001".into(),
-    ///     "localhost:2000".into(),
-    /// )]).unwrap();
+    /// # toxiproxy_rust::TOXIPROXY.populate(vec![toxiproxy_rust::proxy::ProxyPack::new(
+    /// #    "socket".into(),
+    /// #    "localhost:2001".into(),
+    /// #    "localhost:2000".into(),
+    /// # )]).unwrap();
     /// let proxy = toxiproxy_rust::TOXIPROXY.find_proxy("socket").expect("proxy returned");
     /// ```
     pub fn find_proxy(&self, name: &str) -> Result<Proxy, String> {

@@ -5,7 +5,7 @@
 //! ## Setting up a test
 //!
 //! ```rust
-//! use toxiproxy_rust::TOXIPROXY;
+//! use toxiproxy_rust::{TOXIPROXY, proxy::ProxyPack};
 //!
 //! TOXIPROXY.populate(vec![ProxyPack::new(
 //!     "socket".into(),
@@ -20,14 +20,14 @@
 //!         /* For example:
 //!         let result = MyService::Server.call();
 //!         assert!(result.is_ok());
-//!         /*
+//!         */
 //!     });
 //! ```
 //!
 //! ## Setting up a more advanced test
 //!
 //! ```rust
-//! use toxiproxy_rust::TOXIPROXY;
+//! use toxiproxy_rust::{TOXIPROXY, proxy::ProxyPack};
 //!
 //! TOXIPROXY.populate(vec![ProxyPack::new(
 //!     "socket".into(),
@@ -44,7 +44,7 @@
 //!         /* For example:
 //!         let result = MyService::Server.call();
 //!         assert!(result.is_ok());
-//!         /*
+//!         */
 //!     });
 //! ```
 //!
