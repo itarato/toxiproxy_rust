@@ -8,7 +8,7 @@
 [ci-url]: https://travis-ci.org/itarato/toxiproxy_rust
 [crates-badge]: https://img.shields.io/crates/v/toxiproxy_rust.svg
 [crates-url]: https://crates.io/crates/toxiproxy_rust
-[docs-url]: https://docs.rs/toxiproxy_rust/0.1.6/toxiproxy_rust/
+[docs-url]: https://docs.rs/toxiproxy_rust/latest/toxiproxy_rust/
 [docs-badge]: https://img.shields.io/docsrs/toxiproxy_rust
 
 Rust client for [Toxiproxy](https://github.com/Shopify/toxiproxy).
