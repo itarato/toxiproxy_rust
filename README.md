@@ -1,13 +1,15 @@
-Toxiproxy - Rust client
------------------------
+## Toxiproxy - Rust client
 
 [![Build Status][ci-badge]][ci-url]
 [![Crates.io][crates-badge]][crates-url]
+[![Docs][docs-badge]][docs-url]
 
 [ci-badge]: https://travis-ci.org/itarato/toxiproxy_rust.png?branch=master
 [ci-url]: https://travis-ci.org/itarato/toxiproxy_rust
 [crates-badge]: https://img.shields.io/crates/v/toxiproxy_rust.svg
 [crates-url]: https://crates.io/crates/toxiproxy_rust
+[docs-url]: https://docs.rs/toxiproxy_rust/0.1.6/toxiproxy_rust/
+[docs-badge]: https://img.shields.io/docsrs/toxiproxy_rust
 
 Rust client for [Toxiproxy](https://github.com/Shopify/toxiproxy).
 
@@ -48,7 +50,6 @@ TOXIPROXY.find_and_reset_proxy("redis")?.with_latency("downstream".into(), 2000,
 
 Or without a safe lambda (that takes care of resetting a proxy):
 
-
 ```rust
 TOXIPROXY.find_proxy("redis")?.with_latency("downstream".into(), 2000, 0, 1.0)
 // Calling the desired service...
@@ -59,6 +60,7 @@ TOXIPROXY.find_proxy("redis")?.enable();
 ```
 
 Supported toxics:
+
 - [latency](https://github.com/Shopify/toxiproxy#latency)
 - [down](https://github.com/Shopify/toxiproxy#down)
 - [bandwith](https://github.com/Shopify/toxiproxy#bandwith)
