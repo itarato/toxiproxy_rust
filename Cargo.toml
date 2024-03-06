@@ -1,14 +1,18 @@
 [package]
 name = "toxiproxy_rust"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Peter Arato <it.arato@gmail.com>"]
 edition = "2018"
 description = "Lightweight client for Toxiproxy"
 license = "MIT"
+repository = "https://github.com/itarato/toxiproxy_rust"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest = { version = "0.11", default-features = false, features = [
+    "blocking",
+    "json",
+] }
 lazy_static = "1.4"
 http = "0.2"
