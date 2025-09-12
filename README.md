@@ -1,11 +1,8 @@
 ## Toxiproxy - Rust client
 
-[![Build Status][ci-badge]][ci-url]
 [![Crates.io][crates-badge]][crates-url]
 [![Docs][docs-badge]][docs-url]
 
-[ci-badge]: https://travis-ci.org/itarato/toxiproxy_rust.png?branch=master
-[ci-url]: https://travis-ci.org/itarato/toxiproxy_rust
 [crates-badge]: https://img.shields.io/crates/v/toxiproxy_rust.svg
 [crates-url]: https://crates.io/crates/toxiproxy_rust
 [docs-url]: https://docs.rs/toxiproxy_rust/latest/toxiproxy_rust/
